@@ -1,16 +1,16 @@
-import { Geist, Geist_Mono, Roboto } from "next/font/google"
+import { Geist, Geist_Mono, Roboto } from 'next/font/google'
 
-import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { cn } from "@/lib/utils";
+import './globals.css'
+import { ThemeProvider } from '@/components/theme-provider'
+import { cn } from '@/lib/utils'
 
-const robotoHeading = Roboto({subsets:['latin'],variable:'--font-heading'});
+const robotoHeading = Roboto({ subsets: ['latin'], variable: '--font-heading' })
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'})
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' })
 
 const fontMono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
+  subsets: ['latin'],
+  variable: '--font-mono',
 })
 
 export default function RootLayout({
@@ -20,9 +20,15 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang='en'
       suppressHydrationWarning
-      className={cn("antialiased", fontMono.variable, "font-sans", geist.variable, robotoHeading.variable)}
+      className={cn(
+        'antialiased',
+        fontMono.variable,
+        'font-sans',
+        geist.variable,
+        robotoHeading.variable
+      )}
     >
       <body>
         <ThemeProvider>{children}</ThemeProvider>
