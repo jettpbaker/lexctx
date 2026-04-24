@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "endOfLine": "lf",
+  "semi": false,
+  "singleQuote": true,
+  "jsxSingleQuote": true,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "printWidth": 80,
+  "sortTailwindcss": {
+    "stylesheet": "app/globals.css",
+    "functions": ["cn", "cva"]
+  },
+  "ignorePatterns": [
+    ".agents/**",
+    ".next/**",
+    "out/**",
+    "build/**",
+    "node_modules/**"
+  ]
+}
