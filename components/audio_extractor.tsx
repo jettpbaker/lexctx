@@ -8,8 +8,11 @@ import {
   BlobSource,
   BufferTarget,
   Conversion,
+  EncodedAudioPacketSource,
+  EncodedPacketSink,
   FlacOutputFormat,
   Input,
+  type InputAudioTrack,
   Mp3OutputFormat,
   Mp4OutputFormat,
   Output,
@@ -28,7 +31,7 @@ type ExtractedAudio = {
   mode: 'extract' | 'compress'
   mimeType: string
   size: number
-  strategy: 'copy' | 'fallback'
+  strategy: 'copy' | 'fallback' | 'fast-aac'
   url: string
 }
 
@@ -157,6 +160,195 @@ function canKeepCodec(format: OutputFormat, codec: AudioCodec | null) {
   return codec ? format.getSupportedAudioCodecs().includes(codec) : false
 }
 
+const aacFrequencyTable = [
+  96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025,
+  8000, 7350,
+]
+
+type AacConfig = {
+  channelConfiguration: number
+  frequencyIndex: number
+  objectType: number
+}
+
+function readBits(bytes: Uint8Array, bitOffset: number, bitCount: number) {
+  let value = 0
+
+  for (let index = 0; index < bitCount; index++) {
+    const absoluteBit = bitOffset + index
+    const byte = bytes[Math.floor(absoluteBit / 8)]
+    const bit = byte === undefined ? 0 : (byte >> (7 - (absoluteBit % 8))) & 1
+
+    value = (value << 1) | bit
+  }
+
+  return value
+}
+
+function parseAacConfig(description: Uint8Array): AacConfig {
+  if (description.byteLength < 2) {
+    throw new Error('AAC decoder config is too short.')
+  }
+
+  let bitOffset = 0
+  let objectType = readBits(description, bitOffset, 5)
+  bitOffset += 5
+
+  if (objectType === 31) {
+    objectType = 32 + readBits(description, bitOffset, 6)
+    bitOffset += 6
+  }
+
+  const frequencyIndex = readBits(description, bitOffset, 4)
+  bitOffset += 4
+
+  if (frequencyIndex === 15) {
+    throw new Error(
+      'AAC custom sample rates are not supported by the fast path.'
+    )
+  }
+
+  const channelConfiguration = readBits(description, bitOffset, 4)
+
+  if (!aacFrequencyTable[frequencyIndex]) {
+    throw new Error('AAC sample rate is not supported by the fast path.')
+  }
+
+  if (channelConfiguration < 1 || channelConfiguration > 7) {
+    throw new Error('AAC channel layout is not supported by the fast path.')
+  }
+
+  return { channelConfiguration, frequencyIndex, objectType }
+}
+
+function createAdtsHeader(config: AacConfig, frameLength: number) {
+  const profile = config.objectType - 1
+
+  if (profile < 0 || profile > 3) {
+    throw new Error(
+      'Only AAC profiles that fit ADTS are supported by the fast path.'
+    )
+  }
+
+  const header = new Uint8Array(7)
+
+  header[0] = 0xff
+  header[1] = 0xf1
+  header[2] =
+    ((profile & 0x03) << 6) |
+    ((config.frequencyIndex & 0x0f) << 2) |
+    ((config.channelConfiguration >> 2) & 0x01)
+  header[3] =
+    ((config.channelConfiguration & 0x03) << 6) | ((frameLength >> 11) & 0x03)
+  header[4] = (frameLength >> 3) & 0xff
+  header[5] = ((frameLength & 0x07) << 5) | 0x1f
+  header[6] = 0xfc
+
+  return header
+}
+
+function copyBytes(bytes: Uint8Array<ArrayBufferLike>) {
+  const copy = new Uint8Array(bytes.byteLength)
+
+  copy.set(bytes)
+
+  return copy
+}
+
+function copyBufferSource(source: AllowSharedBufferSource) {
+  const view = ArrayBuffer.isView(source)
+    ? new Uint8Array(source.buffer, source.byteOffset, source.byteLength)
+    : new Uint8Array(source)
+
+  return copyBytes(view)
+}
+
+async function copyAacToAdtsBlob(audioTrack: InputAudioTrack) {
+  const sink = new EncodedPacketSink(audioTrack)
+  const firstPacket = await sink.getFirstPacket()
+
+  if (!firstPacket) {
+    throw new Error('Could not read the first AAC packet.')
+  }
+
+  const decoderConfig = await audioTrack.getDecoderConfig()
+  const description = decoderConfig?.description
+  const config = description
+    ? parseAacConfig(copyBufferSource(description))
+    : null
+  const chunks: BlobPart[] = []
+  const offset = firstPacket.timestamp
+  let duration = 0
+
+  for await (const packet of sink.packets(firstPacket)) {
+    duration = Math.max(duration, packet.timestamp - offset + packet.duration)
+
+    if (config) {
+      chunks.push(createAdtsHeader(config, packet.data.byteLength + 7))
+    }
+
+    chunks.push(copyBytes(packet.data))
+  }
+
+  return {
+    blob: new Blob(chunks, { type: 'audio/aac' }),
+    duration,
+  }
+}
+
+async function copyEncodedAudioTrack(
+  audioTrack: InputAudioTrack,
+  outputChoice: OutputChoice
+) {
+  if (!audioTrack.codec) {
+    throw new Error('Could not identify the audio codec.')
+  }
+
+  const sink = new EncodedPacketSink(audioTrack)
+  const firstPacket = await sink.getFirstPacket()
+
+  if (!firstPacket) {
+    throw new Error('Could not read the first audio packet.')
+  }
+
+  const source = new EncodedAudioPacketSource(audioTrack.codec)
+  const output = new Output({
+    format: outputChoice.format,
+    target: new BufferTarget(),
+  })
+  const decoderConfig = await audioTrack.getDecoderConfig()
+  const offset = firstPacket.timestamp
+  let duration = 0
+  let isFirstPacket = true
+
+  output.addAudioTrack(source)
+  await output.start()
+
+  for await (const packet of sink.packets(firstPacket)) {
+    const timestamp = packet.timestamp - offset
+    const offsetPacket = packet.clone({ timestamp })
+
+    duration = Math.max(duration, timestamp + packet.duration)
+
+    await source.add(
+      offsetPacket,
+      isFirstPacket && decoderConfig ? { decoderConfig } : undefined
+    )
+    isFirstPacket = false
+  }
+
+  source.close()
+  await output.finalize()
+
+  const buffer = output.target.buffer
+
+  if (!buffer) {
+    throw new Error('The audio output was empty.')
+  }
+
+  return { buffer, duration }
+}
+
 export function AudioExtractor() {
   const fileInputId = useId()
   const [file, setFile] = useState<File | null>(null)
@@ -235,8 +427,7 @@ export function AudioExtractor() {
         throw new Error('No audio track found in this file.')
       }
 
-      const duration = await input.computeDuration()
-      const outputChoice =
+      let outputChoice =
         mode === 'compress'
           ? {
               format: new WebMOutputFormat(),
@@ -245,66 +436,107 @@ export function AudioExtractor() {
               strategy: 'fallback' as const,
             }
           : getOutputChoice(audioTrack.codec)
+      const canFastAac = mode === 'extract' && audioTrack.codec === 'aac'
       const canCopy =
         mode === 'extract' &&
+        !canFastAac &&
         canKeepCodec(outputChoice.format, audioTrack.codec)
-      const output = new Output({
-        format: outputChoice.format,
-        target: new BufferTarget(),
-      })
-      const conversion = await Conversion.init({
-        input,
-        output,
-        showWarnings: false,
-        video: { discard: true },
-        audio: (track) => ({
-          discard: track.id !== audioTrack.id,
-          ...(mode === 'compress'
-            ? {
-                bitrate: 48000,
-                codec: 'opus' as const,
-                forceTranscode: true,
-                numberOfChannels: 1,
-                sampleRate: 48000,
-              }
-            : {}),
-        }),
-        tags: {},
-      })
-
-      if (!conversion.isValid) {
-        const reasons = conversion.discardedTracks
-          .filter(({ track }) => track.isAudioTrack())
-          .map(({ reason }) => reason)
-          .join(', ')
-
-        throw new Error(
-          reasons
-            ? `Could not extract the audio track: ${reasons}.`
-            : 'Could not extract the audio track.'
-        )
-      }
 
       setStatus(
         mode === 'compress'
           ? 'Compressing for transcription'
-          : canCopy
-            ? 'Copying audio track'
-            : 'Converting audio track'
+          : canFastAac
+            ? 'Writing fast AAC stream'
+            : canCopy
+              ? 'Copying encoded audio packets'
+              : 'Converting audio track'
       )
-      conversion.onProgress = (nextProgress) => {
-        setProgress(Math.round(nextProgress * 100))
+
+      let blob: Blob
+      let duration: number
+
+      if (canFastAac) {
+        setProgress(10)
+
+        try {
+          const result = await copyAacToAdtsBlob(audioTrack)
+
+          blob = result.blob
+          duration = result.duration
+          outputChoice = {
+            format: new AdtsOutputFormat(),
+            mimeType: 'audio/aac',
+            extension: '.aac',
+            strategy: 'fast-aac',
+          }
+        } catch {
+          outputChoice = getOutputChoice(audioTrack.codec)
+          setStatus('Fast AAC failed; copying to M4A')
+          const result = await copyEncodedAudioTrack(audioTrack, outputChoice)
+
+          blob = new Blob([result.buffer], { type: outputChoice.mimeType })
+          duration = result.duration
+        }
+      } else if (canCopy) {
+        setProgress(10)
+        const result = await copyEncodedAudioTrack(audioTrack, outputChoice)
+
+        blob = new Blob([result.buffer], { type: outputChoice.mimeType })
+        duration = result.duration
+      } else {
+        const output = new Output({
+          format: outputChoice.format,
+          target: new BufferTarget(),
+        })
+        const conversion = await Conversion.init({
+          input,
+          output,
+          showWarnings: false,
+          video: { discard: true },
+          audio: (track) => ({
+            discard: track.id !== audioTrack.id,
+            ...(mode === 'compress'
+              ? {
+                  bitrate: 48000,
+                  codec: 'opus' as const,
+                  forceTranscode: true,
+                  numberOfChannels: 1,
+                  sampleRate: 48000,
+                }
+              : {}),
+          }),
+          tags: {},
+        })
+
+        if (!conversion.isValid) {
+          const reasons = conversion.discardedTracks
+            .filter(({ track }) => track.isAudioTrack())
+            .map(({ reason }) => reason)
+            .join(', ')
+
+          throw new Error(
+            reasons
+              ? `Could not extract the audio track: ${reasons}.`
+              : 'Could not extract the audio track.'
+          )
+        }
+
+        conversion.onProgress = (nextProgress) => {
+          setProgress(Math.round(nextProgress * 100))
+        }
+
+        await conversion.execute()
+
+        const outputBuffer = output.target.buffer
+
+        if (!outputBuffer) {
+          throw new Error('The audio output was empty.')
+        }
+
+        blob = new Blob([outputBuffer], { type: outputChoice.mimeType })
+        duration = Number.NaN
       }
 
-      await conversion.execute()
-
-      const buffer = output.target.buffer
-
-      if (!buffer) {
-        throw new Error('The audio output was empty.')
-      }
-
-      const blob = new Blob([buffer], { type: outputChoice.mimeType })
       const url = URL.createObjectURL(blob)
       const finalElapsedMs = performance.now() - startedAt
       const nextResult: ExtractedAudio = {
@@ -320,9 +552,11 @@ export function AudioExtractor() {
         strategy:
           mode === 'compress'
             ? 'fallback'
-            : canCopy
-              ? 'copy'
-              : outputChoice.strategy,
+            : outputChoice.strategy === 'fast-aac'
+              ? 'fast-aac'
+              : canCopy
+                ? 'copy'
+                : outputChoice.strategy,
         url,
       }
 
@@ -480,9 +714,11 @@ export function AudioExtractor() {
                     <p className='text-xs text-muted-foreground'>
                       {result.mode === 'compress'
                         ? 'compressed for transcription'
-                        : result.strategy === 'copy'
-                          ? 'no re-encode'
-                          : 'fallback conversion'}{' '}
+                        : result.strategy === 'fast-aac'
+                          ? 'fast AAC stream'
+                          : result.strategy === 'copy'
+                            ? 'no re-encode'
+                            : 'fallback conversion'}{' '}
                       · {result.codec ?? 'unknown codec'} ·{' '}
                       {formatDuration(result.duration)} ·{' '}
                       {formatBytes(result.size)} ·{' '}
