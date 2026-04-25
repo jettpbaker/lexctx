@@ -32,7 +32,6 @@ export const sources = p.pgTable('sources', {
     .notNull()
     .references(() => collections.id, { onDelete: 'cascade' }),
   name: p.text('name').notNull(),
-  description: p.text('description'),
   status: sourceStatusEnum('status').notNull().default('transcribing'),
   videoStatus: videoStatusEnum('video_status').notNull().default('processing'),
   audioUrl: p.text('audio_url').notNull(),
