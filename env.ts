@@ -4,6 +4,7 @@ import { z } from 'zod'
 export const env = createEnv({
   server: {
     UPLOADTHING_TOKEN: z.string().min(1),
+    FAL_KEY: z.string().min(1),
   },
   client: {},
   experimental__runtimeEnv: process.env,
