@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 
 const robotoHeading = Roboto({ subsets: ['latin'], variable: '--font-heading' })
 
-const geist = Geist({ subsets: ['latin'], variable: '--font-sans' })
+const geist = Geist({subsets:['latin'],variable:'--font-sans'})
 
 const fontMono = Geist_Mono({
   subsets: ['latin'],
@@ -23,12 +23,11 @@ export default function RootLayout({
       lang='en'
       suppressHydrationWarning
       className={cn(
-        'antialiased',
-        fontMono.variable,
-        'font-sans',
-        geist.variable,
-        robotoHeading.variable
-      )}
+              'antialiased',
+              fontMono.variable,
+              'font-sans',
+              robotoHeading.variable
+            , "font-sans", geist.variable)}
     >
       <body>
         <ThemeProvider>{children}</ThemeProvider>
