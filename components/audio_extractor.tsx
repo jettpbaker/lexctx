@@ -116,7 +116,7 @@ function getOutputChoice(codec: AudioCodec | null): OutputChoice {
     return {
       format: new WebMOutputFormat(),
       mimeType: 'audio/webm',
-      extension: '.webm',
+      extension: '.weba',
       strategy: 'copy',
     }
   }
@@ -432,7 +432,7 @@ export function AudioExtractor() {
           ? {
               format: new WebMOutputFormat(),
               mimeType: 'audio/webm',
-              extension: '.webm',
+              extension: '.weba',
               strategy: 'fallback' as const,
             }
           : getOutputChoice(audioTrack.codec)
@@ -728,9 +728,23 @@ export function AudioExtractor() {
                         : ''}
                     </p>
                   </div>
-                  <audio className='w-full' controls src={result.url}>
-                    <track kind='captions' />
-                  </audio>
+                  <div className='flex flex-wrap items-center gap-3'>
+                    <audio
+                      className='min-w-0 flex-1'
+                      controls
+                      controlsList='nodownload'
+                      src={result.url}
+                    >
+                      <track kind='captions' />
+                    </audio>
+                    <a
+                      className='inline-flex h-8 shrink-0 items-center border border-border px-2.5 text-xs font-medium hover:bg-muted'
+                      download={result.fileName}
+                      href={result.url}
+                    >
+                      Download
+                    </a>
+                  </div>
                 </div>
               ))}
             </div>
