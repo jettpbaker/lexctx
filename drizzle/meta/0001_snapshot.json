@@ -193,12 +193,8 @@
           "name": "sources_collection_id_collections_id_fk",
           "tableFrom": "sources",
           "tableTo": "collections",
-          "columnsFrom": [
-            "collection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["collection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -214,21 +210,12 @@
     "public.source_status": {
       "name": "source_status",
       "schema": "public",
-      "values": [
-        "transcribing",
-        "indexing",
-        "ready",
-        "failed"
-      ]
+      "values": ["transcribing", "indexing", "ready", "failed"]
     },
     "public.video_status": {
       "name": "video_status",
       "schema": "public",
-      "values": [
-        "processing",
-        "ready",
-        "failed"
-      ]
+      "values": ["processing", "ready", "failed"]
     }
   },
   "schemas": {},

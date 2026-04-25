@@ -1,4 +1,8 @@
-export function SourceList(sources) {
+type SourceListProps = {
+  sources: unknown[]
+}
+
+export function SourceList({ sources: _sources }: SourceListProps) {
   return (
     <div>
       <div>source.</div>

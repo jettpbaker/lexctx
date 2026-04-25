@@ -1,5 +1,5 @@
 import { start } from 'workflow/api'
-import { transcribeWorkflow } from '@/workflows/transcribe'
+import { transcribeWorkflow } from '~/workflows/transcribe'
 import { Button } from './ui/button'
 
 export function AudioTranscriber() {

@@ -1,8 +1,8 @@
 'use client'
 
-import { SourceList, SourceListEmpty } from '@/components/source_list'
-import { Button } from '@/components/ui/button'
-import { useSourceStore } from '@/hooks/useStore'
+import { SourceList, SourceListEmpty } from '~/components/source_list'
+import { Button } from '~/components/ui/button'
+import { useSourceStore } from '~/hooks/useStore'
 import { useShallow } from 'zustand/react/shallow'
 
 export default function Page() {

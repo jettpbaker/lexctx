@@ -21,7 +21,7 @@ import {
   canEncodeAudio,
 } from 'mediabunny'
 
-import { Button } from '@/components/ui/button'
+import { Button } from '~/components/ui/button'
 
 type ExtractedAudio = {
   codec: AudioCodec | null

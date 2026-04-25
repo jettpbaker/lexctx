@@ -1,12 +1,12 @@
 import { Geist, Geist_Mono, Roboto } from 'next/font/google'
 
 import './globals.css'
-import { ThemeProvider } from '@/components/theme-provider'
-import { cn } from '@/lib/utils'
+import { ThemeProvider } from '~/components/theme-provider'
+import { cn } from '~/lib/utils'
 
 const robotoHeading = Roboto({ subsets: ['latin'], variable: '--font-heading' })
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'})
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' })
 
 const fontMono = Geist_Mono({
   subsets: ['latin'],
@@ -23,11 +23,13 @@ export default function RootLayout({
       lang='en'
       suppressHydrationWarning
       className={cn(
-              'antialiased',
-              fontMono.variable,
-              'font-sans',
-              robotoHeading.variable
-            , "font-sans", geist.variable)}
+        'antialiased',
+        fontMono.variable,
+        'font-sans',
+        robotoHeading.variable,
+        'font-sans',
+        geist.variable
+      )}
     >
       <body>
         <ThemeProvider>{children}</ThemeProvider>

@@ -8,12 +8,14 @@
   "trailingComma": "es5",
   "printWidth": 80,
   "sortTailwindcss": {
-    "stylesheet": "app/globals.css",
+    "stylesheet": "src/app/globals.css",
     "functions": ["cn", "cva"]
   },
   "ignorePatterns": [
     ".agents/**",
     ".next/**",
+    "app/.well-known/**",
+    "src/app/.well-known/**",
     "out/**",
     "build/**",
     "node_modules/**"
