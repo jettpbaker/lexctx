@@ -5,6 +5,7 @@ export const env = createEnv({
   server: {
     UPLOADTHING_TOKEN: z.string().min(1),
     FAL_KEY: z.string().min(1),
+    DATABASE_URL: z.url(),
   },
   client: {},
   experimental__runtimeEnv: process.env,
