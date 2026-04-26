@@ -1,7 +1,7 @@
 import './src/env'
-import { withWorkflow } from 'workflow/next'
-
 import type { NextConfig } from 'next'
+
+import { withWorkflow } from 'workflow/next'
 
 const nextConfig: NextConfig = {}
 

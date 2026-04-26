@@ -1,5 +1,6 @@
 import { start } from 'workflow/api'
 import { transcribeWorkflow } from '~/workflows/transcribe'
+
 import { Button } from './ui/button'
 
 export function AudioTranscriber() {
@@ -22,12 +23,7 @@ export function AudioTranscriber() {
       >
         <label>
           Audio URL
-          <input
-            required
-            type='url'
-            name='audioUrl'
-            className='border-4 border-indigo-500'
-          />
+          <input required type='url' name='audioUrl' className='border-4 border-indigo-500' />
           <br />
           <Button type='submit'>Transcribe</Button>
         </label>

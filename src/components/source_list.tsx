@@ -1,11 +1,16 @@
-type SourceListProps = {
-  sources: unknown[]
-}
+import type { LocalSourceType } from '~/lib/types'
 
-export function SourceList({ sources: _sources }: SourceListProps) {
+import Source from './source'
+
+export function SourceList({ sources }: { sources: LocalSourceType[] }) {
   return (
     <div>
-      <div>source.</div>
+      <p>Sources: {sources.length}</p>
+      <ul>
+        {sources.map((source) => (
+          <Source key={source.id} id={source.id} />
+        ))}
+      </ul>
     </div>
   )
 }

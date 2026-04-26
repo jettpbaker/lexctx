@@ -13,28 +13,22 @@ export const collections = p.pgTable('collections', {
 })
 
 export const sourceStatusEnum = p.pgEnum('source_status', [
+  'pending_upload',
   'transcribing',
   'indexing',
   'ready',
   'failed',
 ])
 
-export const videoStatusEnum = p.pgEnum('video_status', [
-  'processing',
-  'ready',
-  'failed',
-])
+export const videoStatusEnum = p.pgEnum('video_status', ['processing', 'ready', 'failed'])
 
 export const sources = p.pgTable('sources', {
   id: p.uuid('id').primaryKey().defaultRandom(),
-  collectionId: p
-    .uuid('collection_id')
-    .notNull()
-    .references(() => collections.id, { onDelete: 'cascade' }),
+  collectionId: p.uuid('collection_id').references(() => collections.id, { onDelete: 'cascade' }),
   name: p.text('name').notNull(),
-  status: sourceStatusEnum('status').notNull().default('transcribing'),
+  status: sourceStatusEnum('status').notNull().default('pending_upload'),
   videoStatus: videoStatusEnum('video_status').notNull().default('processing'),
-  audioUrl: p.text('audio_url').notNull(),
+  audioUrl: p.text('audio_url'),
   muxPlaybackId: p.text('mux_playback_id'),
   falRequestId: p.text('fal_request_id'),
   transcriptUrl: p.text('transcript_url'),

@@ -1,7 +1,4 @@
-import {
-  createUploadthing,
-  type FileRouter as UploadThingFileRouter,
-} from 'uploadthing/next'
+import { createUploadthing, type FileRouter as UploadThingFileRouter } from 'uploadthing/next'
 
 const f = createUploadthing()
 
