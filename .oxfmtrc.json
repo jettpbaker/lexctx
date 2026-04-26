@@ -6,14 +6,29 @@
   "jsxSingleQuote": true,
   "tabWidth": 2,
   "trailingComma": "es5",
-  "printWidth": 80,
+  "printWidth": 100,
   "sortTailwindcss": {
-    "stylesheet": "app/globals.css",
+    "stylesheet": "src/app/globals.css",
     "functions": ["cn", "cva"]
+  },
+  "sortImports": {
+    "internalPattern": ["^~"],
+    "groups": [
+      "type-import",
+      ["value-builtin", "value-external"],
+      "type-internal",
+      "value-internal",
+      ["type-parent", "type-sibling", "type-index"],
+      ["value-parent", "value-sibling", "value-index"],
+      "unknown"
+    ],
+    "newlinesBetween": true
   },
   "ignorePatterns": [
     ".agents/**",
     ".next/**",
+    "app/.well-known/**",
+    "src/app/.well-known/**",
     "out/**",
     "build/**",
     "node_modules/**"

@@ -1,6 +1,6 @@
 {
-  "id": "95de6b15-d3a3-44fa-a6a9-3b57219f2755",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "90c4c63b-0153-4008-b717-3c670673303b",
+  "prevId": "8e9e0860-7804-440a-a885-b97aa7c86de0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -111,19 +111,13 @@
           "name": "collection_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "name": {
           "name": "name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "status": {
           "name": "status",
@@ -145,7 +139,7 @@
           "name": "audio_url",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "mux_playback_id": {
           "name": "mux_playback_id",
@@ -199,8 +193,12 @@
           "name": "sources_collection_id_collections_id_fk",
           "tableFrom": "sources",
           "tableTo": "collections",
-          "columnsFrom": ["collection_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "collection_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -216,12 +214,22 @@
     "public.source_status": {
       "name": "source_status",
       "schema": "public",
-      "values": ["transcribing", "indexing", "ready", "failed"]
+      "values": [
+        "pending_upload",
+        "transcribing",
+        "indexing",
+        "ready",
+        "failed"
+      ]
     },
     "public.video_status": {
       "name": "video_status",
       "schema": "public",
-      "values": ["processing", "ready", "failed"]
+      "values": [
+        "processing",
+        "ready",
+        "failed"
+      ]
     }
   },
   "schemas": {},
