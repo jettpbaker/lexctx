@@ -1,6 +1,6 @@
 {
-  "id": "8e9e0860-7804-440a-a885-b97aa7c86de0",
-  "prevId": "ef53cfa6-4b8d-470c-87d0-71ef1258474d",
+  "id": "23f8a3fb-1dd0-432a-b0f9-4d21ff8081e5",
+  "prevId": "90c4c63b-0153-4008-b717-3c670673303b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -111,7 +111,7 @@
           "name": "collection_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "name": {
           "name": "name",
@@ -125,7 +125,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'transcribing'"
+          "default": "'pending_upload'"
         },
         "video_status": {
           "name": "video_status",
@@ -139,7 +139,7 @@
           "name": "audio_url",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "mux_playback_id": {
           "name": "mux_playback_id",

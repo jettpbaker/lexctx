@@ -1,6 +1,16 @@
-CREATE TYPE "public"."source_status" AS ENUM('transcribing', 'indexing', 'ready', 'failed');--> statement-breakpoint
-CREATE TYPE "public"."video_status" AS ENUM('processing', 'ready', 'failed');--> statement-breakpoint
-CREATE TABLE "chats" (
+DO $$ BEGIN
+ CREATE TYPE "public"."source_status" AS ENUM('transcribing', 'indexing', 'ready', 'failed');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "public"."video_status" AS ENUM('processing', 'ready', 'failed');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "chats" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"title" text,
 	"messages_gzip_base64" text NOT NULL,
@@ -8,7 +18,7 @@ CREATE TABLE "chats" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "collections" (
+CREATE TABLE IF NOT EXISTS "collections" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
 	"description" text,
@@ -16,7 +26,7 @@ CREATE TABLE "collections" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "sources" (
+CREATE TABLE IF NOT EXISTS "sources" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"collection_id" uuid NOT NULL,
 	"name" text NOT NULL,
@@ -33,4 +43,8 @@ CREATE TABLE "sources" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "sources" ADD CONSTRAINT "sources_collection_id_collections_id_fk" FOREIGN KEY ("collection_id") REFERENCES "public"."collections"("id") ON DELETE cascade ON UPDATE no action;
+DO $$ BEGIN
+ ALTER TABLE "sources" ADD CONSTRAINT "sources_collection_id_collections_id_fk" FOREIGN KEY ("collection_id") REFERENCES "public"."collections"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;

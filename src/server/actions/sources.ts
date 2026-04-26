@@ -11,7 +11,7 @@ export async function createPendingSources(names: string[]) {
 
   const createdSources = await db
     .insert(sources)
-    .values(names.map((name) => ({ name })))
+    .values(names.map((name) => ({ name, status: 'pending_upload' as const })))
     .returning()
   return createdSources
 }

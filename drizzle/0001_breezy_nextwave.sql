@@ -1,1 +1,1 @@
-ALTER TABLE "sources" DROP COLUMN "description";
+ALTER TABLE "sources" DROP COLUMN IF EXISTS "description";

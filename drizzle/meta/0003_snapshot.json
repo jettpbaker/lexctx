@@ -1,6 +1,6 @@
 {
-  "id": "8e9e0860-7804-440a-a885-b97aa7c86de0",
-  "prevId": "ef53cfa6-4b8d-470c-87d0-71ef1258474d",
+  "id": "90c4c63b-0153-4008-b717-3c670673303b",
+  "prevId": "8e9e0860-7804-440a-a885-b97aa7c86de0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -111,7 +111,7 @@
           "name": "collection_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "name": {
           "name": "name",
@@ -139,7 +139,7 @@
           "name": "audio_url",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "mux_playback_id": {
           "name": "mux_playback_id",
