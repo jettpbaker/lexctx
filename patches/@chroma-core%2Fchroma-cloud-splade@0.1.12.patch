@@ -1,0 +1,40 @@
+diff --git a/dist/cjs/chroma-cloud-splade.d.cts b/dist/cjs/chroma-cloud-splade.d.cts
+index 15dc0237afef3628bf011589311809fcbb7ed988..010926ec94ac41198a0573e143aaebf87dae1a1c 100644
+--- a/dist/cjs/chroma-cloud-splade.d.cts
++++ b/dist/cjs/chroma-cloud-splade.d.cts
+@@ -1,33 +1,2 @@
+-import { ChromaClient, SparseVector, SparseEmbeddingFunction } from 'chromadb';
+-
+-interface ChromaCloudSpladeConfig {
+-    model: ChromaCloudSpladeEmbeddingModel;
+-    api_key_env_var: string;
+-}
+-declare enum ChromaCloudSpladeEmbeddingModel {
+-    SPLADE_PP_EN_V1 = "prithivida/Splade_PP_en_v1"
+-}
+-interface ChromaCloudSpladeArgs {
+-    model?: ChromaCloudSpladeEmbeddingModel;
+-    apiKeyEnvVar?: string;
+-    client?: ChromaClient;
+-}
+-interface ChromaCloudSparseEmbeddingsResponse {
+-    embeddings: SparseVector[];
+-}
+-declare class ChromaCloudSpladeEmbeddingFunction implements SparseEmbeddingFunction {
+-    readonly name = "chroma-cloud-splade";
+-    private readonly apiKeyEnvVar;
+-    private readonly model;
+-    private readonly url;
+-    private readonly headers;
+-    constructor(args?: ChromaCloudSpladeArgs);
+-    generate(texts: string[]): Promise<SparseVector[]>;
+-    generateForQueries(texts: string[]): Promise<SparseVector[]>;
+-    static buildFromConfig(config: ChromaCloudSpladeConfig, client?: ChromaClient): ChromaCloudSpladeEmbeddingFunction;
+-    getConfig(): ChromaCloudSpladeConfig;
+-    validateConfigUpdate(newConfig: Record<string, any>): void;
+-    static validateConfig(config: ChromaCloudSpladeConfig): void;
+-}
+-
+-export { type ChromaCloudSparseEmbeddingsResponse, type ChromaCloudSpladeArgs, type ChromaCloudSpladeConfig, ChromaCloudSpladeEmbeddingFunction, ChromaCloudSpladeEmbeddingModel };
++declare const value: unknown;
++export = value;

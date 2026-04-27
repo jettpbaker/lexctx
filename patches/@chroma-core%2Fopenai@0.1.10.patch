@@ -1,0 +1,43 @@
+diff --git a/dist/cjs/openai.d.cts b/dist/cjs/openai.d.cts
+index d2d0987d87fbec44bcf76f0b24032c7ae9014e13..010926ec94ac41198a0573e143aaebf87dae1a1c 100644
+--- a/dist/cjs/openai.d.cts
++++ b/dist/cjs/openai.d.cts
+@@ -1,36 +1,2 @@
+-import { EmbeddingFunction, EmbeddingFunctionSpace } from 'chromadb';
+-
+-interface OpenAIConfig {
+-    api_key_env_var?: string;
+-    model_name: string;
+-    organization_id?: string;
+-    dimensions?: number;
+-    api_base?: string;
+-}
+-interface OpenAIArgs {
+-    apiKeyEnvVar?: string;
+-    modelName: string;
+-    organizationId?: string;
+-    dimensions?: number;
+-    apiKey?: string;
+-    apiBase?: string;
+-}
+-declare class OpenAIEmbeddingFunction implements EmbeddingFunction {
+-    readonly name = "openai";
+-    private readonly apiKeyEnvVar;
+-    private readonly modelName;
+-    private readonly dimensions;
+-    private readonly organizationId;
+-    private readonly apiBase;
+-    private client;
+-    constructor(args: OpenAIArgs);
+-    generate(texts: string[]): Promise<number[][]>;
+-    defaultSpace(): EmbeddingFunctionSpace;
+-    supportedSpaces(): EmbeddingFunctionSpace[];
+-    static buildFromConfig(config: OpenAIConfig): OpenAIEmbeddingFunction;
+-    getConfig(): OpenAIConfig;
+-    validateConfigUpdate(newConfig: Record<string, any>): void;
+-    static validateConfig(config: OpenAIConfig): void;
+-}
+-
+-export { type OpenAIArgs, type OpenAIConfig, OpenAIEmbeddingFunction };
++declare const value: unknown;
++export = value;
