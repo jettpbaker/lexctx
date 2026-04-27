@@ -1,6 +1,6 @@
 import { useSourceStore } from '~/hooks/useStore'
 
-import extractAudioFile from './extractAudioFile'
+import extractAudioFile from './media/extractAudioFile'
 
 export default async function runExtractionStage(id: string, onDone: () => void) {
   const updateExtractionProgress = useSourceStore.getState().updateExtractionProgress

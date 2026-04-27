@@ -1,8 +1,8 @@
 import { ALL_FORMATS, BlobSource, Input } from 'mediabunny'
 
-import { extractAacToAdtsFile } from './codecs/aac'
-import { extractMp3File } from './codecs/mp3'
-import { extractOpusToWebmFile } from './codecs/opus'
+import { extractAacToAdtsFile } from '../codecs/aac'
+import { extractMp3File } from '../codecs/mp3'
+import { extractOpusToWebmFile } from '../codecs/opus'
 
 export default async function extractAudioFile(
   video: File,

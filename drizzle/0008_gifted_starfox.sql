@@ -1,0 +1,1 @@
+ALTER TABLE "sources" ALTER COLUMN "collection_id" SET NOT NULL;

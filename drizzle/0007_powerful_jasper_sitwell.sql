@@ -1,0 +1,2 @@
+CREATE INDEX "sources_collection_id_idx" ON "sources" USING btree ("collection_id");--> statement-breakpoint
+ALTER TABLE "sources" ADD CONSTRAINT "sources_content_hash_unique" UNIQUE("content_hash","content_hash_type","file_size");
