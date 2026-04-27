@@ -25,6 +25,7 @@ export default async function runAudioUploadStage(id: string, onDone: () => void
 
     await uploadFiles('audioUploader', {
       files: [audio],
+      input: { sourceId: id },
       onUploadProgress: ({ progress }) => updateUploadProgress(id, progress),
     })
 

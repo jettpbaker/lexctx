@@ -7,6 +7,7 @@ type SourceFiles = {
 }
 
 type ActiveType = {
+  hashing: string | null
   extracting: string | null
   audioUploading: string | null
   videoUploading: string | null
@@ -16,6 +17,7 @@ type SourceStore = {
   sources: Record<string, LocalSourceType>
   files: Partial<Record<string, SourceFiles>>
 
+  hashQueue: string[]
   extractQueue: string[]
   audioUploadQueue: string[]
   videoUploadQueue: string[]
@@ -23,6 +25,9 @@ type SourceStore = {
   active: ActiveType
 
   addSource: (source: LocalSourceType, file: File) => void
+
+  markHashingStarted: (id: string) => void
+  markHashingCompleted: (id: string) => void
 
   markExtractionStarted: (id: string) => void
   markExtractionCompleted: (id: string, audio: File) => void
@@ -34,6 +39,7 @@ type SourceStore = {
   // markVideoUploadStarted: (id: string) => void
   // markVideoUploadCompleted: (id: string) => void
 
+  updateHashingProgress: (id: string, progress: number) => void
   updateExtractionProgress: (id: string, progress: number) => void
   updateUploadProgress: (id: string, progress: number) => void
 }
@@ -46,11 +52,45 @@ const addSource = (
   queue: string[]
 ) => {
   return {
-    extractQueue: [...queue, source.id],
+    hashQueue: [...queue, source.id],
     sources: { ...sources, [source.id]: source },
     files: { ...files, [source.id]: { video: file } },
   }
 }
+
+const markHashingStarted = (
+  id: string,
+  sources: Record<string, LocalSourceType>,
+  active: ActiveType,
+  queue: string[]
+): Partial<SourceStore> => ({
+  hashQueue: queue.filter((sourceId) => sourceId !== id),
+  active: { ...active, hashing: id },
+  sources: {
+    ...sources,
+    [id]: {
+      ...sources[id],
+      audioStatus: { stage: 'hashing', progress: 0 },
+    },
+  },
+})
+
+const markHashingCompleted = (
+  id: string,
+  sources: Record<string, LocalSourceType>,
+  active: ActiveType,
+  queue: string[]
+): Partial<SourceStore> => ({
+  extractQueue: [...queue, id],
+  active: { ...active, hashing: null },
+  sources: {
+    ...sources,
+    [id]: {
+      ...sources[id],
+      audioStatus: { stage: 'extraction-queued' },
+    },
+  },
+})
 
 const markExtractionStarted = (
   id: string,
@@ -149,6 +189,7 @@ const markAudioPipelineFailed = (
   sources: Record<string, LocalSourceType>,
   files: Partial<Record<string, SourceFiles>>,
   active: ActiveType,
+  hashQueue: string[],
   extractQueue: string[],
   audioUploadQueue: string[]
 ): Partial<SourceStore> => {
@@ -156,10 +197,12 @@ const markAudioPipelineFailed = (
   const { [id]: _, ...restFiles } = files
 
   return {
+    hashQueue: hashQueue.filter((sourceId) => sourceId !== id),
     extractQueue: extractQueue.filter((sourceId) => sourceId !== id),
     audioUploadQueue: audioUploadQueue.filter((sourceId) => sourceId !== id),
     active: {
       ...active,
+      hashing: active.hashing === id ? null : active.hashing,
       extracting: active.extracting === id ? null : active.extracting,
       audioUploading: active.audioUploading === id ? null : active.audioUploading,
     },
@@ -174,6 +217,31 @@ const markAudioPipelineFailed = (
           },
         }
       : sources,
+  }
+}
+
+const updateHashingProgress = (
+  id: string,
+  progress: number,
+  sources: Record<string, LocalSourceType>
+): Partial<SourceStore> => {
+  const source = sources[id]
+
+  if (!source || source.audioStatus.stage !== 'hashing') {
+    return {}
+  }
+
+  return {
+    sources: {
+      ...sources,
+      [id]: {
+        ...source,
+        audioStatus: {
+          ...source.audioStatus,
+          progress,
+        },
+      },
+    },
   }
 }
 
@@ -230,18 +298,27 @@ export const useSourceStore = create<SourceStore>()((set) => ({
   sources: {},
   files: {},
 
+  hashQueue: [],
   extractQueue: [],
   audioUploadQueue: [],
   videoUploadQueue: [],
 
   active: {
+    hashing: null,
     extracting: null,
     audioUploading: null,
     videoUploading: null,
   },
 
   addSource: (source, file) =>
-    set((state) => addSource(state.sources, state.files, source, file, state.extractQueue)),
+    set((state) => addSource(state.sources, state.files, source, file, state.hashQueue)),
+
+  markHashingStarted: (id) =>
+    set((state) => markHashingStarted(id, state.sources, state.active, state.hashQueue)),
+  markHashingCompleted: (id) =>
+    set((state) => markHashingCompleted(id, state.sources, state.active, state.extractQueue)),
+  updateHashingProgress: (id, progress) =>
+    set((state) => updateHashingProgress(id, progress, state.sources)),
 
   markExtractionStarted: (id) =>
     set((state) => markExtractionStarted(id, state.sources, state.active, state.extractQueue)),
@@ -269,6 +346,7 @@ export const useSourceStore = create<SourceStore>()((set) => ({
         state.sources,
         state.files,
         state.active,
+        state.hashQueue,
         state.extractQueue,
         state.audioUploadQueue
       )

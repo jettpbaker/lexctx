@@ -1,4 +1,6 @@
 export type AudioStatusType =
+  | { stage: 'hashing-queued' }
+  | { stage: 'hashing'; progress: number }
   | { stage: 'extraction-queued' }
   | { stage: 'extracting'; progress: number }
   | { stage: 'upload-queued' }
@@ -13,7 +15,7 @@ export type VideoStatusType =
 
 export type LocalSourceType = {
   id: string
-  collectionId: string | null
+  collectionId: string
   name: string
   audioStatus: AudioStatusType
   videoStatus: VideoStatusType

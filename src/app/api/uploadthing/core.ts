@@ -1,4 +1,8 @@
 import { createUploadthing, type FileRouter as UploadThingFileRouter } from 'uploadthing/next'
+import { start } from 'workflow/api'
+import z from 'zod'
+import { markSourceAudioUploaded, markSourceFailed } from '~/server/actions/sources'
+import { ingestSource } from '~/workflows/ingestSource'
 
 const f = createUploadthing()
 
@@ -6,21 +10,30 @@ const f = createUploadthing()
 export const fileRouter = {
   // Define as many FileRoutes as you like, each with a unique routeSlug
   audioUploader: f({
-    audio: {
-      /**
-       * For full list of options and defaults, see the File Route API reference
-       * @see https://docs.uploadthing.com/file-routes#route-config
-       */
-      maxFileSize: '256MB',
-      maxFileCount: 1,
-    },
-  }).onUploadComplete(async ({ file }) => {
-    // This code RUNS ON YOUR SERVER after upload
-    console.log('file url', file.ufsUrl)
+    audio: { maxFileSize: '256MB', maxFileCount: 1 },
+  })
+    .input(z.object({ sourceId: z.uuid() }))
+    .middleware(({ input }) => {
+      return {
+        sourceId: input.sourceId,
+      }
+    })
+    .onUploadComplete(async ({ file, metadata }) => {
+      // This code RUNS ON YOUR SERVER after upload
+      try {
+        await markSourceAudioUploaded(metadata.sourceId, file.ufsUrl)
+        await start(ingestSource, [metadata.sourceId, file.ufsUrl])
+      } catch (error) {
+        console.error(`Error starting transcription workflow, ${error}`)
+        await markSourceFailed(
+          metadata.sourceId,
+          error instanceof Error ? error.message : 'Audio upload failed'
+        )
+      }
 
-    // !!! Whatever is returned here is sent to the clientside `onClientUploadComplete` callback
-    return { fileUrl: file.ufsUrl }
-  }),
+      // !!! Whatever is returned here is sent to the clientside `onClientUploadComplete` callback
+      return { fileUrl: file.ufsUrl }
+    }),
 } satisfies UploadThingFileRouter
 
 export type FileRouter = typeof fileRouter

@@ -36,6 +36,34 @@
       "when": 1777190948361,
       "tag": "0004_ambitious_microbe",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777203707592,
+      "tag": "0005_chief_tigra",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777259861347,
+      "tag": "0006_reflective_nicolaos",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1777260547958,
+      "tag": "0007_powerful_jasper_sitwell",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1777261880729,
+      "tag": "0008_gifted_starfox",
+      "breakpoints": true
     }
   ]
 }
