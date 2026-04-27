@@ -2,6 +2,7 @@ import { Geist, Geist_Mono, Roboto } from 'next/font/google'
 
 import './globals.css'
 import { ThemeProvider } from '~/components/theme-provider'
+import { TooltipProvider } from '~/components/ui/tooltip'
 import { cn } from '~/lib/utils'
 
 const robotoHeading = Roboto({ subsets: ['latin'], variable: '--font-heading' })
@@ -28,11 +29,14 @@ export default function RootLayout({
         'font-sans',
         robotoHeading.variable,
         'font-sans',
-        geist.variable
+        geist.variable,
+        'h-full'
       )}
     >
-      <body>
-        <ThemeProvider>{children}</ThemeProvider>
+      <body className='h-full'>
+        <ThemeProvider>
+          <TooltipProvider>{children}</TooltipProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

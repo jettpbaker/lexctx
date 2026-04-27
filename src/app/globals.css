@@ -23,8 +23,10 @@
   --muted-foreground: oklch(0.556 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --destructive: oklch(0.6409 0.155 12.04);
+  --destructive-foreground: oklch(0.6409 0.155 12.04);
+  --success: oklch(0.7121 0.0947 155.75);
+  --warn: oklch(0.6409 0.155 12.04);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -33,8 +35,8 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
+  --radius: 0.5rem;
+  --sidebar: var(--card);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
@@ -59,12 +61,14 @@
   --muted-foreground: oklch(0.55 0.0014 286.37);
   --accent: oklch(0.9189 0 0);
   --accent-foreground: oklch(0.1913 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.705 0.1766 12.63);
+  --destructive: oklch(0.6409 0.155 12.04);
+  --destructive-foreground: oklch(0.6409 0.155 12.04);
+  --success: oklch(0.7121 0.0947 155.75);
+  --warn: oklch(0.6409 0.155 12.04);
   --border: oklch(0.2768 0 0);
   --input: oklch(0.2768 0 0);
   --ring: oklch(0.861 0.0014 286.37);
-  --sidebar: oklch(0.1913 0 0);
+  --sidebar: var(--card);
   --sidebar-foreground: oklch(0.861 0.0014 286.37);
   --sidebar-primary: oklch(0.9189 0 0);
   --sidebar-primary-foreground: oklch(0.1913 0 0);
@@ -93,6 +97,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warn: var(--warn);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -115,9 +121,65 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+@keyframes lex-text-shimmer-pan {
+  from {
+    background-position: 100% center;
+  }
+  to {
+    background-position: 0% center;
+  }
+}
+
+/*
+ * Text-fill progress: paints the leading portion of the text in the success
+ * color and the trailing portion in `currentColor`, with a 1px feather across
+ * the boundary. Drive via inline `style={{ '--progress-fill': '42%' }}`.
+ */
+@property --progress-fill {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+
+.text-progress-fill {
+  background-image: linear-gradient(
+    to right,
+    var(--color-success) calc(var(--progress-fill) - 1px),
+    currentColor calc(var(--progress-fill) + 1px)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .text-progress-fill {
+    transition: --progress-fill 200ms ease-out;
+  }
+}
+
+/*
+ * Shimmer pan: pairs with the `lex-text-shimmer-pan` keyframes.
+ * Duration overridable via `--shimmer-duration`. Disabled entirely when the
+ * user prefers reduced motion (default state).
+ */
+.lex-shimmer-pan {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lex-shimmer-pan {
+    animation: lex-text-shimmer-pan var(--shimmer-duration, 2s) linear infinite;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
   }
   ::selection {
     background-color: #373737;
