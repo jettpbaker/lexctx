@@ -1,6 +1,6 @@
 {
-  "id": "90c4c63b-0153-4008-b717-3c670673303b",
-  "prevId": "8e9e0860-7804-440a-a885-b97aa7c86de0",
+  "id": "392de52f-5931-45bb-a67a-b39bae7ff979",
+  "prevId": "da622814-d3b0-4baf-b4cd-c92fd4d4d3a2",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -111,7 +111,7 @@
           "name": "collection_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "name": {
           "name": "name",
@@ -119,13 +119,31 @@
           "primaryKey": false,
           "notNull": true
         },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "content_hash_type": {
+          "name": "content_hash_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "file_size": {
+          "name": "file_size",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
         "status": {
           "name": "status",
           "type": "source_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'transcribing'"
+          "default": "'pending_upload'"
         },
         "video_status": {
           "name": "video_status",
@@ -137,6 +155,12 @@
         },
         "audio_url": {
           "name": "audio_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "audio_key": {
+          "name": "audio_key",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -153,18 +177,11 @@
           "primaryKey": false,
           "notNull": false
         },
-        "transcript_url": {
-          "name": "transcript_url",
+        "transcript_text": {
+          "name": "transcript_text",
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "chunk_count": {
-          "name": "chunk_count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
         },
         "error": {
           "name": "error",
@@ -187,20 +204,146 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "sources_collection_id_idx": {
+          "name": "sources_collection_id_idx",
+          "columns": [
+            {
+              "expression": "collection_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "sources_collection_id_collections_id_fk": {
           "name": "sources_collection_id_collections_id_fk",
           "tableFrom": "sources",
           "tableTo": "collections",
-          "columnsFrom": ["collection_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "collection_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "sources_content_hash_unique": {
+          "name": "sources_content_hash_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "content_hash",
+            "content_hash_type",
+            "file_size"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.transcript_segments": {
+      "name": "transcript_segments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "index": {
+          "name": "index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_seconds": {
+          "name": "start_seconds",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "end_seconds": {
+          "name": "end_seconds",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "text": {
+          "name": "text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "transcript_segments_source_id_idx": {
+          "name": "transcript_segments_source_id_idx",
+          "columns": [
+            {
+              "expression": "source_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "transcript_segments_source_id_sources_id_fk": {
+          "name": "transcript_segments_source_id_sources_id_fk",
+          "tableFrom": "transcript_segments",
+          "tableTo": "sources",
+          "columnsFrom": [
+            "source_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "transcript_segments_source_id_index_unique": {
+          "name": "transcript_segments_source_id_index_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "source_id",
+            "index"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -210,12 +353,22 @@
     "public.source_status": {
       "name": "source_status",
       "schema": "public",
-      "values": ["pending_upload", "transcribing", "indexing", "ready", "failed"]
+      "values": [
+        "pending_upload",
+        "transcribing",
+        "indexing",
+        "ready",
+        "failed"
+      ]
     },
     "public.video_status": {
       "name": "video_status",
       "schema": "public",
-      "values": ["processing", "ready", "failed"]
+      "values": [
+        "processing",
+        "ready",
+        "failed"
+      ]
     }
   },
   "schemas": {},

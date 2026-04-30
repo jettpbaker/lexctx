@@ -2,9 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-
 import { buttonVariants } from '~/components/ui/button'
-import { cn } from '~/lib/utils'
 import {
   Sidebar,
   SidebarContent,
@@ -17,6 +15,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '~/components/ui/sidebar'
+import { cn } from '~/lib/utils'
 
 const DUMMY_CHATS = [
   { id: 'contract-review-acme', title: 'Contract review — Acme Corp' },
@@ -35,9 +34,9 @@ export default function ChatSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="h-7" aria-hidden />
+        <div className='h-7' aria-hidden />
         <Link
-          href="/chat/new"
+          href='/chat/new'
           className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'w-full')}
         >
           + New chat
@@ -59,7 +58,7 @@ export default function ChatSidebar() {
                       render={<Link href={href} prefetch={false} />}
                       tooltip={chat.title}
                     >
-                      <span className="truncate">{chat.title}</span>
+                      <span className='truncate'>{chat.title}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )
@@ -68,7 +67,7 @@ export default function ChatSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border p-2 text-center text-xs text-sidebar-foreground/50">
+      <SidebarFooter className='border-t border-sidebar-border p-2 text-center text-xs text-sidebar-foreground/50'>
         Lex
       </SidebarFooter>
     </Sidebar>

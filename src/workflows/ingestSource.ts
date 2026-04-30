@@ -11,6 +11,7 @@ import {
   RagChunk,
   TranscriptSegmentForChunking,
 } from '~/lib/rag/chunkTranscriptSegments'
+import deleteSourceAudio from '~/server/actions/deleteSourceAudio'
 import {
   getSourceIndexMetadata,
   markSourceFailed,
@@ -31,7 +32,7 @@ type WizperChunk = {
   text: string
 }
 
-export async function ingestSource(id: string, url: string) {
+export async function ingestSource(id: string, url: string, key: string) {
   'use workflow'
 
   const falRequestId = await submitTranscription({ url })
@@ -84,6 +85,12 @@ export async function ingestSource(id: string, url: string) {
   )
 
   await persistSourceTranscript(id, transcript.data.text, transcriptSegments)
+
+  try {
+    await deleteSourceAudioFile(id, key)
+  } catch (error) {
+    console.error('Error deleting source audio file: ', error)
+  }
 
   const chunks = await createRagChunks(transcriptSegments)
 
@@ -173,6 +180,12 @@ async function loadSourceIndexMetadata(sourceId: string) {
   'use step'
 
   return getSourceIndexMetadata(sourceId)
+}
+
+async function deleteSourceAudioFile(sourceId: string, key: string) {
+  'use step'
+
+  await deleteSourceAudio(sourceId, key)
 }
 
 async function indexRagChunks(

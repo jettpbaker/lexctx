@@ -152,12 +152,6 @@
   -webkit-text-fill-color: transparent;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .text-progress-fill {
-    transition: --progress-fill 200ms ease-out;
-  }
-}
-
 /*
  * Shimmer pan: pairs with the `lex-text-shimmer-pan` keyframes.
  * Duration overridable via `--shimmer-duration`. Disabled entirely when the

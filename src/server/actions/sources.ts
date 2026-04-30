@@ -29,8 +29,39 @@ function isUniqueViolation(error: unknown) {
   return false
 }
 
+export async function getSourceById(id: string) {
+  return db.select().from(sources).where(eq(sources.id, id)).limit(1)
+}
+
+export async function deleteSourceById(id: string) {
+  return db.delete(sources).where(eq(sources.id, id))
+}
+
 export async function listCollections() {
-  return db.select().from(collections).orderBy(asc(collections.createdAt))
+  return db.select().from(collections).orderBy(asc(collections.createdAt), asc(collections.id))
+}
+
+export async function listCollectionsWithSources() {
+  const [allCollections, allSources] = await Promise.all([
+    db.select().from(collections).orderBy(asc(collections.createdAt), asc(collections.id)),
+    db.select().from(sources).orderBy(asc(sources.createdAt), asc(sources.id)),
+  ])
+
+  const sourcesByCollection = new Map<string, typeof allSources>()
+
+  for (const source of allSources) {
+    const collectionSources = sourcesByCollection.get(source.collectionId)
+    if (collectionSources) {
+      collectionSources.push(source)
+    } else {
+      sourcesByCollection.set(source.collectionId, [source])
+    }
+  }
+
+  return allCollections.map((collection) => ({
+    ...collection,
+    sources: sourcesByCollection.get(collection.id) ?? [],
+  }))
 }
 
 export async function createCollection(name: string) {
@@ -74,8 +105,15 @@ export async function setSourceHash(id: string, hash: string, fileSize: number) 
   }
 }
 
-export async function markSourceAudioUploaded(id: string, url: string) {
-  await db.update(sources).set({ status: 'transcribing', audioUrl: url }).where(eq(sources.id, id))
+export async function markSourceAudioUploaded(id: string, url: string, key: string) {
+  await db
+    .update(sources)
+    .set({ status: 'transcribing', audioUrl: url, audioKey: key })
+    .where(eq(sources.id, id))
+}
+
+export async function removeSourceAudioMetadata(id: string) {
+  await db.update(sources).set({ audioUrl: null, audioKey: null }).where(eq(sources.id, id))
 }
 
 export async function markSourceFailed(id: string, error: string) {

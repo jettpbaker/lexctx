@@ -25,6 +25,7 @@ type SourceStore = {
   active: ActiveType
 
   addSource: (source: LocalSourceType, file: File) => void
+  removeSource: (sourceId: string) => void
 
   markHashingStarted: (id: string) => void
   markHashingCompleted: (id: string) => void
@@ -58,6 +59,39 @@ const addSource = (
   }
 }
 
+const removeSource = (
+  sources: Record<string, LocalSourceType>,
+  files: Partial<Record<string, SourceFiles>>,
+  sourceId: string,
+  active: ActiveType,
+  hashQueue: string[],
+  extractQueue: string[],
+  audioUploadQueue: string[],
+  videoUploadQueue: string[]
+): Partial<SourceStore> => {
+  function removeFromActive(active: ActiveType, id: string) {
+    return {
+      hashing: active.hashing === id ? null : active.hashing,
+      extracting: active.extracting === id ? null : active.extracting,
+      audioUploading: active.audioUploading === id ? null : active.audioUploading,
+      videoUploading: active.videoUploading === id ? null : active.videoUploading,
+    }
+  }
+
+  const { [sourceId]: _source, ...restSources } = sources
+  const { [sourceId]: _file, ...restFiles } = files
+
+  return {
+    sources: restSources,
+    files: restFiles,
+    hashQueue: hashQueue.filter((id) => id !== sourceId),
+    extractQueue: extractQueue.filter((id) => id !== sourceId),
+    audioUploadQueue: audioUploadQueue.filter((id) => id !== sourceId),
+    videoUploadQueue: videoUploadQueue.filter((id) => id !== sourceId),
+    active: removeFromActive(active, sourceId),
+  }
+}
+
 const markHashingStarted = (
   id: string,
   sources: Record<string, LocalSourceType>,
@@ -80,37 +114,45 @@ const markHashingCompleted = (
   sources: Record<string, LocalSourceType>,
   active: ActiveType,
   queue: string[]
-): Partial<SourceStore> => ({
-  extractQueue: [...queue, id],
-  active: { ...active, hashing: null },
-  sources: {
-    ...sources,
-    [id]: {
-      ...sources[id],
-      audioStatus: { stage: 'extraction-queued' },
+): Partial<SourceStore> => {
+  if (!sources[id]) return {}
+
+  return {
+    extractQueue: [...queue, id],
+    active: { ...active, hashing: null },
+    sources: {
+      ...sources,
+      [id]: {
+        ...sources[id],
+        audioStatus: { stage: 'extraction-queued' },
+      },
     },
-  },
-})
+  }
+}
 
 const markExtractionStarted = (
   id: string,
   sources: Record<string, LocalSourceType>,
   active: ActiveType,
   queue: string[]
-): Partial<SourceStore> => ({
-  extractQueue: queue.filter((sourceId) => sourceId !== id),
-  active: {
-    ...active,
-    extracting: id,
-  },
-  sources: {
-    ...sources,
-    [id]: {
-      ...sources[id],
-      audioStatus: { stage: 'extracting', progress: 0 },
+): Partial<SourceStore> => {
+  if (!sources[id]) return {}
+
+  return {
+    extractQueue: queue.filter((sourceId) => sourceId !== id),
+    active: {
+      ...active,
+      extracting: id,
     },
-  },
-})
+    sources: {
+      ...sources,
+      [id]: {
+        ...sources[id],
+        audioStatus: { stage: 'extracting', progress: 0 },
+      },
+    },
+  }
+}
 
 const markExtractionCompleted = (
   id: string,
@@ -120,6 +162,8 @@ const markExtractionCompleted = (
   queue: string[],
   audio: File
 ): Partial<SourceStore> => {
+  if (!sources[id]) return {}
+
   const existingFiles = files[id]
   if (!existingFiles?.video) {
     console.error('Could not find existing video file for ', files[id])
@@ -145,17 +189,21 @@ const markAudioUploadStarted = (
   sources: Record<string, LocalSourceType>,
   active: ActiveType,
   queue: string[]
-): Partial<SourceStore> => ({
-  audioUploadQueue: queue.filter((sourceId) => sourceId !== id),
-  active: { ...active, audioUploading: id },
-  sources: {
-    ...sources,
-    [id]: {
-      ...sources[id],
-      audioStatus: { stage: 'uploading', progress: 0 },
+): Partial<SourceStore> => {
+  if (!sources[id]) return {}
+
+  return {
+    audioUploadQueue: queue.filter((sourceId) => sourceId !== id),
+    active: { ...active, audioUploading: id },
+    sources: {
+      ...sources,
+      [id]: {
+        ...sources[id],
+        audioStatus: { stage: 'uploading', progress: 0 },
+      },
     },
-  },
-})
+  }
+}
 
 const markAudioUploadCompleted = (
   id: string,
@@ -163,6 +211,8 @@ const markAudioUploadCompleted = (
   files: Partial<Record<string, SourceFiles>>,
   active: ActiveType
 ): Partial<SourceStore> => {
+  if (!sources[id]) return {}
+
   const { [id]: _, ...restFiles } = files
 
   return {
@@ -312,6 +362,19 @@ export const useSourceStore = create<SourceStore>()((set) => ({
 
   addSource: (source, file) =>
     set((state) => addSource(state.sources, state.files, source, file, state.hashQueue)),
+  removeSource: (sourceId) =>
+    set((state) =>
+      removeSource(
+        state.sources,
+        state.files,
+        sourceId,
+        state.active,
+        state.hashQueue,
+        state.extractQueue,
+        state.audioUploadQueue,
+        state.videoUploadQueue
+      )
+    ),
 
   markHashingStarted: (id) =>
     set((state) => markHashingStarted(id, state.sources, state.active, state.hashQueue)),

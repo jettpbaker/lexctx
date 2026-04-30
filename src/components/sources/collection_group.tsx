@@ -2,13 +2,15 @@
 
 import { ArrowDown01Icon, MoreHorizontalIcon, PlusSignIcon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { useState } from 'react'
+import type { ChangeEvent } from 'react'
+import { useRef, useState } from 'react'
 import {
   SourceRow,
   type SourceRowAction,
   type SourceRowSource,
 } from '~/components/sources/source_row'
 import { Button } from '~/components/ui/button'
+import { MAX_FILES_PER_UPLOAD } from '~/lib/constants'
 import { type CollectionStatusSummary, summarizeStatuses } from '~/lib/source_status'
 import { cn } from '~/lib/utils'
 
@@ -25,6 +27,7 @@ export type CollectionGroupCollection = {
 type CollectionGroupProps = {
   collection: CollectionGroupCollection
   defaultOpen?: boolean
+  onAddSources?: (collection: CollectionGroupCollection, files: File[]) => void
   onEditSource?: SourceRowAction
   onDeleteSource?: SourceRowAction
 }
@@ -32,18 +35,40 @@ type CollectionGroupProps = {
 export function CollectionGroup({
   collection,
   defaultOpen = true,
+  onAddSources,
   onEditSource,
   onDeleteSource,
 }: CollectionGroupProps) {
   const [open, setOpen] = useState(defaultOpen)
   const summary = summarizeStatuses(collection.sources.map((s) => s.status))
 
+  const inputRef = useRef<HTMLInputElement | null>(null)
+
+  function handleFilesSelected(e: ChangeEvent<HTMLInputElement>) {
+    const input = e.currentTarget
+    const files = Array.from(input.files ?? [])
+    input.value = ''
+
+    if (files.length === 0) {
+      // TODO: Toast
+      return
+    }
+
+    if (files.length > MAX_FILES_PER_UPLOAD) {
+      // TODO: Toast
+      console.error(`You can only upload ${MAX_FILES_PER_UPLOAD} files at a time`)
+      return
+    }
+
+    onAddSources?.(collection, files)
+  }
+
   return (
     <section className='flex flex-col overflow-clip rounded-lg border border-border bg-background'>
       <header
         className={cn(
-          'flex h-[30px] items-stretch border-border bg-background text-xs',
-          open ? 'sticky top-0 z-10 rounded-t-lg border-b' : 'rounded-lg'
+          'box-border flex h-[30px] items-stretch border-b bg-background text-xs',
+          open ? 'sticky top-0 z-10 rounded-t-lg border-border' : 'rounded-lg border-transparent'
         )}
       >
         <button
@@ -67,7 +92,23 @@ export function CollectionGroup({
           <RatioBadge summary={summary} />
         </button>
         <div className='flex shrink-0 items-center gap-0.5 pr-1.5 pl-1 text-muted-foreground'>
-          <Button variant='ghost' size='icon-xs' aria-label='Add sources'>
+          <input
+            ref={inputRef}
+            type='file'
+            accept='video/*'
+            multiple
+            className='hidden'
+            onChange={handleFilesSelected}
+          />
+          <Button
+            onClick={() => {
+              if (!onAddSources) return
+              inputRef?.current?.click()
+            }}
+            variant='ghost'
+            size='icon-xs'
+            aria-label='Add sources'
+          >
             <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} />
           </Button>
           <Button variant='ghost' size='icon-xs' aria-label='Collection actions'>

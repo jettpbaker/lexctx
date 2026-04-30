@@ -1,11 +1,20 @@
 'use client'
 
-import type { CSSProperties, MouseEvent } from 'react'
+import type { CSSProperties, MouseEvent, ReactNode } from 'react'
 
-import { Delete02Icon, Edit02Icon, Edit03Icon } from '@hugeicons/core-free-icons'
+import { Delete02Icon, Edit03Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
+import { useState } from 'react'
 import { Shimmer } from '~/components/ai-elements/shimmer'
 import { Button } from '~/components/ui/button'
+import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from '~/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip'
 import {
   isLocalStage,
@@ -34,6 +43,12 @@ type SourceRowProps = {
 export function SourceRow({ source, onEdit, onDelete }: SourceRowProps) {
   const { status } = source
   const failed = status.kind === 'failed'
+  const [deleteOpen, setDeleteOpen] = useState(false)
+
+  function handleConfirmDelete() {
+    setDeleteOpen(false)
+    onDelete?.(source)
+  }
 
   return (
     <div
@@ -51,7 +66,42 @@ export function SourceRow({ source, onEdit, onDelete }: SourceRowProps) {
             <StatusLabel status={status} />
           </div>
           <div className='pointer-events-none col-start-1 row-start-1 flex translate-x-1 items-center justify-end opacity-0 transition-all duration-150 ease-out group-focus-within/row:pointer-events-auto group-focus-within/row:translate-x-0 group-focus-within/row:opacity-100 group-hover/row:pointer-events-auto group-hover/row:translate-x-0 group-hover/row:opacity-100 motion-reduce:translate-x-0 motion-reduce:transition-none'>
-            <SourceActions source={source} onEdit={onEdit} onDelete={onDelete} />
+            <Popover open={deleteOpen} onOpenChange={setDeleteOpen}>
+              <SourceActions
+                source={source}
+                onEdit={onEdit}
+                deleteTrigger={
+                  <PopoverTrigger
+                    render={
+                      <Button
+                        variant='ghost'
+                        size='icon-sm'
+                        aria-label='Delete source'
+                        className='hover:bg-destructive/10 hover:text-destructive'
+                      >
+                        <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+                      </Button>
+                    }
+                  />
+                }
+              />
+              <PopoverContent align='end' side='left' className='w-64'>
+                <PopoverHeader>
+                  <PopoverTitle>Delete source?</PopoverTitle>
+                  <PopoverDescription>
+                    This removes the source, transcript, and embeddings.
+                  </PopoverDescription>
+                </PopoverHeader>
+                <div className='flex justify-end gap-1.5'>
+                  <Button variant='ghost' size='sm' onClick={() => setDeleteOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button variant='destructive' size='sm' onClick={handleConfirmDelete}>
+                    Delete
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </div>
@@ -62,10 +112,10 @@ export function SourceRow({ source, onEdit, onDelete }: SourceRowProps) {
 type SourceActionsProps = {
   source: SourceRowSource
   onEdit?: SourceRowAction
-  onDelete?: SourceRowAction
+  deleteTrigger: ReactNode
 }
 
-function SourceActions({ source, onEdit, onDelete }: SourceActionsProps) {
+function SourceActions({ source, onEdit, deleteTrigger }: SourceActionsProps) {
   const handle = (cb?: SourceRowAction) => (e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation()
     cb?.(source)
@@ -88,35 +138,23 @@ function SourceActions({ source, onEdit, onDelete }: SourceActionsProps) {
         />
         <TooltipContent>Edit source</TooltipContent>
       </Tooltip>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              variant='ghost'
-              size='icon-sm'
-              aria-label='Delete source'
-              onClick={handle(onDelete)}
-              className='hover:bg-destructive/10 hover:text-destructive'
-            >
-              <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
-            </Button>
-          }
-        />
-        <TooltipContent>Delete source</TooltipContent>
-      </Tooltip>
+      {deleteTrigger}
     </div>
   )
 }
 
 function StatusLabel({ status }: { status: SourceUiStatus }) {
-  if (status.kind === 'ready') {
-    return null
-  }
-
   const baseClasses = 'shrink-0 text-[10px] tracking-wide uppercase'
+
+  if (status.kind === 'ready') {
+    // TODO: Unsure how to handle ready status
+    return null
+    // return <span className={baseClasses}>{labelForStatus(status)}</span>
+  }
 
   if (isLocalStage(status)) {
     const pct = Math.max(0, Math.min(1, status.progress)) * 100
+    if (status.kind === 'hashing') console.log('pct', pct)
     return (
       <span
         key={status.kind}

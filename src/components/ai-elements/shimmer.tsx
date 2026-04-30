@@ -1,8 +1,9 @@
 'use client'
 
-import { cn } from '~/lib/utils'
 import type { CSSProperties, ElementType } from 'react'
+
 import { createElement, memo, useMemo } from 'react'
+import { cn } from '~/lib/utils'
 
 export interface TextShimmerProps {
   children: string
@@ -36,7 +37,7 @@ const ShimmerComponent = ({
     {
       className: cn(
         'lex-shimmer-pan relative inline-block bg-[length:250%_100%,auto] bg-clip-text',
-        '[--bg:linear-gradient(90deg,#0000_calc(50%-var(--spread)),var(--color-background),#0000_calc(50%+var(--spread)))] [background-repeat:no-repeat,padding-box]',
+        '[background-repeat:no-repeat,padding-box] [--bg:linear-gradient(90deg,#0000_calc(50%-var(--spread)),var(--color-background),#0000_calc(50%+var(--spread)))]',
         className,
         'text-transparent'
       ),
@@ -44,8 +45,7 @@ const ShimmerComponent = ({
         '--spread': `${dynamicSpread}px`,
         '--shimmer-base': textColorVar,
         '--shimmer-duration': `${duration}s`,
-        backgroundImage:
-          'var(--bg), linear-gradient(var(--shimmer-base), var(--shimmer-base))',
+        backgroundImage: 'var(--bg), linear-gradient(var(--shimmer-base), var(--shimmer-base))',
       } as CSSProperties,
     },
     children

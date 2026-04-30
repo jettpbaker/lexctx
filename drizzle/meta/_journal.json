@@ -64,6 +64,13 @@
       "when": 1777261880729,
       "tag": "0008_gifted_starfox",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1777297046795,
+      "tag": "0009_broad_rattler",
+      "breakpoints": true
     }
   ]
 }

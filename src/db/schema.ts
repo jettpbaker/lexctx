@@ -37,6 +37,7 @@ export const sources = p.pgTable(
     status: sourceStatusEnum('status').notNull().default('pending_upload'),
     videoStatus: videoStatusEnum('video_status').notNull().default('processing'),
     audioUrl: p.text('audio_url'),
+    audioKey: p.text('audio_key'),
     muxPlaybackId: p.text('mux_playback_id'),
     falRequestId: p.text('fal_request_id'),
     transcriptText: p.text('transcript_text'),
