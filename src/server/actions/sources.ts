@@ -37,8 +37,16 @@ export async function deleteSourceById(id: string) {
   return db.delete(sources).where(eq(sources.id, id))
 }
 
+export async function deleteCollectionById(id: string) {
+  return db.delete(collections).where(eq(collections.id, id))
+}
+
 export async function listCollections() {
   return db.select().from(collections).orderBy(asc(collections.createdAt), asc(collections.id))
+}
+
+export async function listSourcesForCollection(collectionId: string) {
+  return db.select().from(sources).where(eq(sources.collectionId, collectionId))
 }
 
 export async function listCollectionsWithSources() {

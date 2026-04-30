@@ -1,8 +1,15 @@
 'use client'
 
-import { ArrowDown01Icon, MoreHorizontalIcon, PlusSignIcon } from '@hugeicons/core-free-icons'
-import { HugeiconsIcon } from '@hugeicons/react'
 import type { ChangeEvent } from 'react'
+
+import {
+  ArrowDown01Icon,
+  Delete02Icon,
+  Edit03Icon,
+  MoreHorizontalIcon,
+  PlusSignIcon,
+} from '@hugeicons/core-free-icons'
+import { HugeiconsIcon } from '@hugeicons/react'
 import { useRef, useState } from 'react'
 import {
   SourceRow,
@@ -10,6 +17,13 @@ import {
   type SourceRowSource,
 } from '~/components/sources/source_row'
 import { Button } from '~/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '~/components/ui/dropdown-menu'
 import { MAX_FILES_PER_UPLOAD } from '~/lib/constants'
 import { type CollectionStatusSummary, summarizeStatuses } from '~/lib/source_status'
 import { cn } from '~/lib/utils'
@@ -111,9 +125,25 @@ export function CollectionGroup({
           >
             <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} />
           </Button>
-          <Button variant='ghost' size='icon-xs' aria-label='Collection actions'>
-            <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button variant='ghost' size='icon-xs' aria-label='Collection actions'>
+                  <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align='end'>
+              <DropdownMenuItem>
+                <HugeiconsIcon icon={Edit03Icon} strokeWidth={2} />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem variant='destructive'>
+                <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
@@ -162,18 +192,18 @@ function RatioBadge({ summary }: { summary: CollectionStatusSummary }) {
   if (!allReady) {
     return (
       <Shimmer
-        duration={1.5}
-        spread={3}
-        as='span'
-        textColorVar='var(--color-foreground)'
         className='font-mono text-[11px] tabular-nums'
+        color='var(--muted-foreground)'
+        shimmerColor='var(--color-foreground)'
+        as='span'
+        duration={2}
       >
         {ratio}
       </Shimmer>
     )
   }
 
-  return <span className='font-mono text-[11px] text-foreground tabular-nums'>{ratio}</span>
+  return <span className='font-mono text-[11px] text-muted-foreground tabular-nums'>{ratio}</span>
 }
 
 function EmptyCollection() {
