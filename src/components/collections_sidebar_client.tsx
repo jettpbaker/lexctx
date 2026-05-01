@@ -3,8 +3,7 @@
 import type { SourceRowSource } from '~/components/sources/source_row'
 import type { LocalSourceType } from '~/lib/types'
 
-import { useEffect } from 'react'
-import useSWR from 'swr'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useShallow } from 'zustand/react/shallow'
 import {
   CollectionGroup,
@@ -12,13 +11,14 @@ import {
 } from '~/components/sources/collection_group'
 import { useSourceStore } from '~/hooks/useStore'
 import tickPipeline from '~/lib/localPipeline/tickPipeline'
+import { queryClient } from '~/lib/query_client'
+import { COLLECTIONS_WITH_SOURCES_KEY } from '~/lib/query_keys'
 import {
   dbStatusToSourceUiStatus,
   isInFlight,
   localAudioStatusToSourceUiStatus,
   shouldUseLocalSourceStatus,
 } from '~/lib/source_status'
-import { COLLECTIONS_WITH_SOURCES_KEY } from '~/lib/swr_keys'
 import { deleteSource } from '~/server/actions/deleteSource'
 import { createPendingSources, listCollectionsWithSources } from '~/server/actions/sources'
 
@@ -37,34 +37,21 @@ export default function CollectionsSidebarClient({
   const addSource = useSourceStore((state) => state.addSource)
   const removeSource = useSourceStore((state) => state.removeSource)
 
-  const { data = initialCollections, mutate } = useSWR<CollectionsWithSources>(
-    COLLECTIONS_WITH_SOURCES_KEY,
-    listCollectionsWithSources,
-    {
-      fallbackData: initialCollections,
-      refreshInterval: (collections) =>
-        shouldPollCollections(mergeCollections(collections ?? [], localSources)) ? 2000 : 0,
-    }
-  )
+  const query = useQuery({
+    queryKey: [COLLECTIONS_WITH_SOURCES_KEY],
+    queryFn: listCollectionsWithSources,
+    initialData: initialCollections,
+    refetchInterval: (query) => {
+      const dbCollections = query.state.data ?? initialCollections
+      const mergedCollections = mergeCollections(dbCollections, localSources)
+      return shouldPollCollections(mergedCollections) ? 2000 : false
+    },
+  })
 
+  const data = query.data
   const collections = mergeCollections(data, localSources)
 
-  useEffect(() => {
-    if (process.env.NODE_ENV !== 'development') return
-
-    console.debug(
-      '[collections-sidebar] DB source statuses',
-      data.flatMap((collection) =>
-        collection.sources.map((source) => ({
-          collection: collection.name,
-          source: source.name,
-          status: source.status,
-        }))
-      )
-    )
-  }, [data])
-
-  function removeSourceFromSWRCollections(
+  function removeSourceFromQuery(
     collections: CollectionsWithSources | undefined,
     sourceId: string
   ): CollectionsWithSources {
@@ -74,51 +61,80 @@ export default function CollectionsSidebarClient({
     }))
   }
 
-  async function onAddSources(collection: CollectionGroupCollection, files: File[]) {
-    const names = files.map((file) => file.name)
+  const addSourcesMutation = useMutation({
+    mutationFn: ({
+      collection,
+      files,
+    }: {
+      collection: CollectionGroupCollection
+      files: File[]
+    }) => {
+      const names = files.map((file) => file.name)
+      return createPendingSources(collection.id, names)
+    },
+    onSuccess: (data, variables) => {
+      data.forEach((source, index) => {
+        const file = variables.files[index]
+        const localSource: LocalSourceType = {
+          id: source.id,
+          collectionId: variables.collection.id,
+          name: source.name,
+          audioStatus: { stage: 'hashing-queued' },
+          videoStatus: { stage: 'pending' },
+          createdAt: source.createdAt,
+        }
 
-    const sources = await createPendingSources(collection.id, names)
+        addSource(localSource, file)
+      })
 
-    sources.forEach((source, index) => {
-      const file = files[index]
-      const localSource: LocalSourceType = {
-        id: source.id,
-        collectionId: source.collectionId,
-        name: source.name,
-        audioStatus: { stage: 'hashing-queued' },
-        videoStatus: { stage: 'pending' },
-        createdAt: source.createdAt,
-      }
+      requestAnimationFrame(() => {
+        tickPipeline()
+      })
 
-      addSource(localSource, file)
-    })
+      queryClient.invalidateQueries({
+        queryKey: [COLLECTIONS_WITH_SOURCES_KEY],
+      })
+    },
+  })
 
-    requestAnimationFrame(() => {
-      tickPipeline()
-    })
+  const onDeleteSourcesMutation = useMutation({
+    mutationFn: (source: SourceRowSource) => {
+      return deleteSource(source.id)
+    },
+    onMutate: async (source) => {
+      const queryKey = [COLLECTIONS_WITH_SOURCES_KEY]
+      await queryClient.cancelQueries({ queryKey })
 
-    void mutate()
+      const previousCollections = queryClient.getQueryData<CollectionsWithSources>(queryKey)
+
+      removeSource(source.id)
+
+      queryClient.setQueryData<CollectionsWithSources>(queryKey, (current) =>
+        removeSourceFromQuery(current, source.id)
+      )
+
+      return { previousCollections }
+    },
+    onError: (error, source, context) => {
+      // TODO: Toast
+      console.error(`Error deleting source: ${source.id}`, error)
+
+      const queryKey = [COLLECTIONS_WITH_SOURCES_KEY]
+
+      queryClient.setQueryData<CollectionsWithSources>(queryKey, context?.previousCollections)
+    },
+    onSettled: () => {
+      const queryKey = [COLLECTIONS_WITH_SOURCES_KEY]
+      queryClient.invalidateQueries({ queryKey })
+    },
+  })
+
+  function onAddSources(collection: CollectionGroupCollection, files: File[]) {
+    addSourcesMutation.mutate({ collection, files })
   }
 
   async function onDeleteSource(source: SourceRowSource) {
-    removeSource(source.id)
-
-    try {
-      await mutate(
-        async (current) => {
-          await deleteSource(source.id)
-          return removeSourceFromSWRCollections(current, source.id)
-        },
-        {
-          optimisticData: (current) => removeSourceFromSWRCollections(current, source.id),
-          rollbackOnError: true,
-          revalidate: true,
-        }
-      )
-    } catch (error) {
-      // TODO: Toast
-      console.error('Error deleting source: ', error)
-    }
+    onDeleteSourcesMutation.mutate(source)
   }
 
   return (

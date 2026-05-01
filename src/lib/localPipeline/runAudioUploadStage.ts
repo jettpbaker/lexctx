@@ -1,9 +1,9 @@
 import type { FileRouter } from '~/app/api/uploadthing/core'
 
-import { mutate } from 'swr'
 import { genUploader } from 'uploadthing/client'
 import { useSourceStore } from '~/hooks/useStore'
-import { COLLECTIONS_WITH_SOURCES_KEY } from '~/lib/swr_keys'
+import { queryClient } from '~/lib/query_client'
+import { COLLECTIONS_WITH_SOURCES_KEY } from '~/lib/query_keys'
 
 const { uploadFiles } = genUploader<FileRouter>()
 
@@ -31,7 +31,8 @@ export default async function runAudioUploadStage(id: string, onDone: () => void
       onUploadProgress: ({ progress }) => updateUploadProgress(id, progress),
     })
 
-    await mutate(COLLECTIONS_WITH_SOURCES_KEY)
+    await queryClient.invalidateQueries({ queryKey: [COLLECTIONS_WITH_SOURCES_KEY] })
+
     markAudioUploadCompleted(id)
   } catch (error) {
     console.error(error)
