@@ -21,6 +21,7 @@ self.onmessage = async (e: MessageEvent<HashWorkerMessage>) => {
 
     const reader = video.stream().getReader()
     let processed = 0
+    let lastProgress = -1
 
     while (true) {
       const { done, value } = await reader.read()
@@ -29,11 +30,16 @@ self.onmessage = async (e: MessageEvent<HashWorkerMessage>) => {
       hasher.update(value)
       processed += value.length
 
-      const response: HashWorkerResponse = {
-        type: 'progress',
-        progress: Math.round((processed / video.size) * 100),
+      const progress = Math.round((processed / video.size) * 100)
+
+      if (progress !== lastProgress) {
+        lastProgress = progress
+        const response: HashWorkerResponse = {
+          type: 'progress',
+          progress,
+        }
+        self.postMessage(response)
       }
-      self.postMessage(response)
     }
 
     const hash = hasher.digest()

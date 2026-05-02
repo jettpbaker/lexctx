@@ -26,6 +26,7 @@ type SourceStore = {
 
   addSource: (source: LocalSourceType, file: File) => void
   removeSource: (sourceId: string) => void
+  renameSource: (sourceId: string, name: string) => void
 
   markHashingStarted: (id: string) => void
   markHashingCompleted: (id: string) => void
@@ -89,6 +90,25 @@ const removeSource = (
     audioUploadQueue: audioUploadQueue.filter((id) => id !== sourceId),
     videoUploadQueue: videoUploadQueue.filter((id) => id !== sourceId),
     active: removeFromActive(active, sourceId),
+  }
+}
+
+const renameSource = (
+  sources: Record<string, LocalSourceType>,
+  sourceId: string,
+  name: string
+): Partial<SourceStore> => {
+  const source = sources[sourceId]
+  if (!source) return {}
+
+  return {
+    sources: {
+      ...sources,
+      [sourceId]: {
+        ...source,
+        name,
+      },
+    },
   }
 }
 
@@ -375,6 +395,7 @@ export const useSourceStore = create<SourceStore>()((set) => ({
         state.videoUploadQueue
       )
     ),
+  renameSource: (sourceId, name) => set((state) => renameSource(state.sources, sourceId, name)),
 
   markHashingStarted: (id) =>
     set((state) => markHashingStarted(id, state.sources, state.active, state.hashQueue)),

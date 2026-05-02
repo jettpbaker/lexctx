@@ -1,6 +1,6 @@
 'use server'
 
-import { asc, eq } from 'drizzle-orm'
+import { asc, desc, eq } from 'drizzle-orm'
 import db from '~/db'
 import { collections, sources, transcriptSegments } from '~/db/schema'
 import { MAX_FILES_PER_UPLOAD } from '~/lib/constants'
@@ -34,15 +34,11 @@ export async function getSourceById(id: string) {
 }
 
 export async function deleteSourceById(id: string) {
-  return db.delete(sources).where(eq(sources.id, id))
+  await db.delete(sources).where(eq(sources.id, id))
 }
 
 export async function deleteCollectionById(id: string) {
-  return db.delete(collections).where(eq(collections.id, id))
-}
-
-export async function listCollections() {
-  return db.select().from(collections).orderBy(asc(collections.createdAt), asc(collections.id))
+  await db.delete(collections).where(eq(collections.id, id))
 }
 
 export async function listSourcesForCollection(collectionId: string) {
@@ -50,9 +46,10 @@ export async function listSourcesForCollection(collectionId: string) {
 }
 
 export async function listCollectionsWithSources() {
+  // TODO: Do this with a join for 1 query
   const [allCollections, allSources] = await Promise.all([
-    db.select().from(collections).orderBy(asc(collections.createdAt), asc(collections.id)),
-    db.select().from(sources).orderBy(asc(sources.createdAt), asc(sources.id)),
+    db.select().from(collections).orderBy(desc(collections.createdAt), asc(collections.id)),
+    db.select().from(sources).orderBy(desc(sources.createdAt), asc(sources.id)),
   ])
 
   const sourcesByCollection = new Map<string, typeof allSources>()
@@ -82,16 +79,44 @@ export async function createCollection(name: string) {
   return collection
 }
 
+export async function updateCollectionNameById(id: string, name: string) {
+  const trimmedName = name.trim()
+  if (trimmedName.length === 0) {
+    throw new Error('Collection name is required')
+  }
+
+  await db
+    .update(collections)
+    .set({ name: trimmedName })
+    .where(eq(collections.id, id))
+    .returning({ id: collections.id, name: collections.name })
+}
+
 export async function createPendingSources(collectionId: string, names: string[]) {
   if (names.length === 0) return []
   if (names.length > MAX_FILES_PER_UPLOAD)
     throw new Error('You can upload up to 13 sources at once')
+
+  await new Promise((resolve) => setTimeout(resolve, 750))
 
   const createdSources = await db
     .insert(sources)
     .values(names.map((name) => ({ collectionId, name, status: 'pending_upload' as const })))
     .returning()
   return createdSources
+}
+
+export async function updateSourceNameById(id: string, name: string) {
+  const trimmedName = name.trim()
+  if (trimmedName.length === 0) {
+    throw new Error('Source name is required')
+  }
+
+  await db
+    .update(sources)
+    .set({ name: trimmedName })
+    .where(eq(sources.id, id))
+    .returning({ id: sources.id, name: sources.name })
 }
 
 export async function setSourceHash(id: string, hash: string, fileSize: number) {

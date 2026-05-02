@@ -81,7 +81,7 @@
   --muted: oklch(0.2768 0 0);
   --muted-foreground: oklch(0.55 0.0014 286.37);
   --accent: oklch(0.9189 0 0);
-  --accent-foreground: oklch(0.1913 0 0);
+  --accent-foreground: oklch(0.861 0.0014 286.37);
   --destructive: oklch(0.6409 0.155 12.04);
   --destructive-foreground: oklch(0.6409 0.155 12.04);
   --success: oklch(0.7121 0.0947 155.75);
@@ -186,7 +186,25 @@
 }
 
 @theme inline {
-  --animate-success-sweep: success-sweep 1250ms var(--ease-in-out-cubic) forwards;
+  --animate-success-sweep: success-sweep 2000ms var(--ease-in-out-cubic) forwards;
+}
+
+@keyframes file-drag-sweep {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  to {
+    transform: translateX(200%);
+    opacity: 0;
+  }
+}
+
+@theme inline {
+  --animate-file-drag-sweep: file-drag-sweep 1250ms var(--ease-in-out-cubic) forwards infinite;
 }
 
 @layer base {

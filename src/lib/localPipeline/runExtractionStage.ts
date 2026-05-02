@@ -1,4 +1,5 @@
 import { useSourceStore } from '~/hooks/useStore'
+import { markSourceFailed } from '~/server/actions/sources'
 
 import extractAudioFile from './media/extractAudioFile'
 
@@ -25,7 +26,9 @@ export default async function runExtractionStage(id: string, onDone: () => void)
     markExtractionCompleted(id, file)
   } catch (error) {
     console.error(error)
-    markAudioPipelineFailed(id, error instanceof Error ? error.message : 'Audio extraction failed')
+    const errorMessage = error instanceof Error ? error.message : 'Audio extraction failed'
+    markAudioPipelineFailed(id, errorMessage)
+    await markSourceFailed(id, errorMessage)
   } finally {
     onDone()
   }

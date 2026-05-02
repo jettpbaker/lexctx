@@ -1,6 +1,7 @@
 'use client'
 
 import type { CSSProperties, MouseEvent, ReactNode } from 'react'
+import type { KeyboardEvent } from 'react'
 
 import { Delete02Icon, Edit03Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -36,27 +37,81 @@ export type SourceRowAction = (source: SourceRowSource) => void
 
 type SourceRowProps = {
   source: SourceRowSource
-  onEdit?: SourceRowAction
+  onEdit?: (source: SourceRowSource, name: string) => void
   onDelete?: SourceRowAction
 }
 
 export function SourceRow({ source, onEdit, onDelete }: SourceRowProps) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [sourceName, setSourceName] = useState(source.name)
   const [showSuccessSweep, setShowSuccessSweep] = useState(false)
-  const previousState = useRef(source.status.kind)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+
+  const editInput = useRef<HTMLInputElement>(null)
+  const cancelEditRef = useRef(false)
+
+  const previousStatus = useRef(source.status.kind)
 
   const { status } = source
   const failed = status.kind === 'failed'
-  const [deleteOpen, setDeleteOpen] = useState(false)
 
   useEffect(() => {
-    if (status.kind === 'ready' && previousState.current !== 'ready') setShowSuccessSweep(true)
-    previousState.current = status.kind
+    if (status.kind === 'ready' && previousStatus.current !== 'ready') setShowSuccessSweep(true)
+    previousStatus.current = status.kind
   }, [status])
 
   function handleConfirmDelete() {
     setDeleteOpen(false)
     onDelete?.(source)
   }
+
+  function startEditing() {
+    cancelEditRef.current = false
+    setIsEditing(true)
+  }
+
+  function commitEdit() {
+    if (cancelEditRef.current) {
+      cancelEditRef.current = false
+      return
+    }
+
+    const trimmedName = sourceName.trim()
+    setIsEditing(false)
+
+    if (trimmedName.length === 0) {
+      setSourceName(source.name)
+      return
+    }
+
+    setSourceName(trimmedName)
+
+    if (trimmedName !== source.name) {
+      onEdit?.(source, trimmedName)
+    }
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.currentTarget.blur()
+    } else if (e.key === 'Escape') {
+      cancelEditRef.current = true
+      setIsEditing(false)
+      setSourceName(source.name)
+      e.currentTarget.blur()
+    }
+  }
+
+  useEffect(() => {
+    setSourceName(source.name)
+  }, [source.name])
+
+  useEffect(() => {
+    if (isEditing && editInput.current) {
+      editInput.current.focus()
+      editInput.current.select()
+    }
+  }, [isEditing])
 
   return (
     <>
@@ -77,7 +132,24 @@ export function SourceRow({ source, onEdit, onDelete }: SourceRowProps) {
           )}
         >
           <div className='flex w-full items-center gap-2 px-3 py-2'>
-            <span className='min-w-0 flex-1 truncate text-xs font-medium'>{source.name}</span>
+            <span
+              className={cn('min-w-0 flex-1 truncate text-xs font-medium', isEditing && 'hidden')}
+            >
+              {sourceName}
+            </span>
+
+            <input
+              ref={editInput}
+              value={sourceName}
+              onChange={(e) => setSourceName(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={commitEdit}
+              className={cn(
+                'min-w-0 flex-1 truncate text-xs font-medium focus:ring-0 focus:outline-none',
+                !isEditing && 'hidden'
+              )}
+            />
+
             <div className='grid shrink-0 items-center'>
               <div className='col-start-1 row-start-1 flex items-center justify-end transition-opacity duration-150 ease-out group-focus-within/row:opacity-0 group-hover/row:opacity-0 motion-reduce:transition-none'>
                 <StatusLabel status={status} />
@@ -86,7 +158,7 @@ export function SourceRow({ source, onEdit, onDelete }: SourceRowProps) {
                 <Popover open={deleteOpen} onOpenChange={setDeleteOpen}>
                   <SourceActions
                     source={source}
-                    onEdit={onEdit}
+                    onEdit={startEditing}
                     deleteTrigger={
                       <PopoverTrigger
                         render={
@@ -169,7 +241,6 @@ function StatusLabel({ status }: { status: SourceUiStatus }) {
 
   if (isLocalStage(status)) {
     const pct = Math.max(0, Math.min(1, status.progress)) * 100
-    if (status.kind === 'hashing') console.log('pct', pct)
     return (
       <span
         key={status.kind}
@@ -195,14 +266,12 @@ function StatusLabel({ status }: { status: SourceUiStatus }) {
     )
   }
 
+  if (status.kind === 'failed') {
+    return <span className={cn(baseClasses, 'text-destructive')}>{labelForStatus(status)}</span>
+  }
+
   return (
-    <span
-      className={cn(
-        baseClasses,
-        status.kind === 'failed' && 'text-destructive',
-        status.kind === 'queued' && 'text-muted-foreground'
-      )}
-    >
+    <span className={cn(baseClasses, status.kind === 'queued' && 'text-muted-foreground')}>
       {labelForStatus(status)}
     </span>
   )
