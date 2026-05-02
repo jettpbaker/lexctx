@@ -1,6 +1,7 @@
 'use server'
 
 import { asc, desc, eq } from 'drizzle-orm'
+import { unstable_noStore as noStore } from 'next/cache'
 import db from '~/db'
 import { collections, sources, transcriptSegments } from '~/db/schema'
 import { MAX_FILES_PER_UPLOAD } from '~/lib/constants'
@@ -46,6 +47,8 @@ export async function listSourcesForCollection(collectionId: string) {
 }
 
 export async function listCollectionsWithSources() {
+  noStore()
+
   // TODO: Do this with a join for 1 query
   const [allCollections, allSources] = await Promise.all([
     db.select().from(collections).orderBy(desc(collections.createdAt), asc(collections.id)),
@@ -96,8 +99,6 @@ export async function createPendingSources(collectionId: string, names: string[]
   if (names.length === 0) return []
   if (names.length > MAX_FILES_PER_UPLOAD)
     throw new Error('You can upload up to 13 sources at once')
-
-  await new Promise((resolve) => setTimeout(resolve, 750))
 
   const createdSources = await db
     .insert(sources)
