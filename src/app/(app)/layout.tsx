@@ -6,8 +6,8 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
   return (
     <SidebarProvider>
       <ChatSidebar />
-      <SidebarTrigger className="fixed top-2 left-2 z-20" />
-      <main className="relative flex min-h-svh w-full min-w-0 flex-1 flex-col bg-background">
+      <SidebarTrigger className='fixed top-2 left-2 z-20' />
+      <main className='relative flex min-h-svh w-full min-w-0 flex-1 flex-col bg-background'>
         {children}
       </main>
       <CollectionsSidebar />

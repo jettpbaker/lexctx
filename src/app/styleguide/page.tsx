@@ -77,7 +77,7 @@ function SidebarFrame({ children, className }: { children: React.ReactNode; clas
   return (
     <div
       className={
-        'flex h-full w-full max-w-[32rem] flex-col rounded-lg border border-border bg-background' +
+        'flex h-full w-full max-w-[32rem] flex-col overflow-clip rounded-lg border border-border bg-background' +
         (className ?? '')
       }
     >

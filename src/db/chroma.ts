@@ -69,7 +69,10 @@ type LectureChunkSourceMetadata = {
   collectionName: string
 }
 
-export async function upsertLectureChunks(metadata: LectureChunkSourceMetadata, chunks: RagChunk[]) {
+export async function upsertLectureChunks(
+  metadata: LectureChunkSourceMetadata,
+  chunks: RagChunk[]
+) {
   const collection = await getLectureChunksCollection()
 
   await collection.upsert({
@@ -86,5 +89,14 @@ export async function upsertLectureChunks(metadata: LectureChunkSourceMetadata, 
       segmentStartIndex: chunk.segmentStartIndex,
       segmentEndIndex: chunk.segmentEndIndex,
     })),
+  })
+}
+
+export async function deleteLectureChunks(sourceId: string) {
+  const collection = await getLectureChunksCollection()
+  await collection.delete({
+    where: {
+      sourceId,
+    },
   })
 }

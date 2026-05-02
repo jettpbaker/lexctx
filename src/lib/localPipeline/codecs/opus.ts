@@ -47,10 +47,7 @@ export async function extractOpusToWebmFile(
     // WebM carries timestamps, so normalize the extracted track to start at 0.
     const adjustedPacket = packet.clone({ timestamp: packet.timestamp - startTimestamp })
 
-    await source.add(
-      adjustedPacket,
-      isFirstPacket && decoderConfig ? { decoderConfig } : undefined
-    )
+    await source.add(adjustedPacket, isFirstPacket && decoderConfig ? { decoderConfig } : undefined)
     isFirstPacket = false
   }
 

@@ -1,55 +1,85 @@
-'use client'
+"use client";
 
-import { cn } from '~/lib/utils'
-import type { CSSProperties, ElementType } from 'react'
-import { createElement, memo, useMemo } from 'react'
+import { cn } from "~/lib/utils";
+import type { MotionProps } from "motion/react";
+import { motion } from "motion/react";
+import type { CSSProperties, ElementType, JSX } from "react";
+import { memo, useMemo } from "react";
+
+type MotionHTMLProps = MotionProps & Record<string, unknown>;
+
+// Cache motion components at module level to avoid creating during render
+const motionComponentCache = new Map<
+  keyof JSX.IntrinsicElements,
+  React.ComponentType<MotionHTMLProps>
+>();
+
+const getMotionComponent = (element: keyof JSX.IntrinsicElements) => {
+  let component = motionComponentCache.get(element);
+  if (!component) {
+    component = motion.create(element);
+    motionComponentCache.set(element, component);
+  }
+  return component;
+};
 
 export interface TextShimmerProps {
-  children: string
-  as?: ElementType
-  className?: string
-  /** Base text color the shimmer reveals (second gradient stop). Highlight still uses `background` token. */
-  textColorVar?: string
-  /** Loop length in seconds */
-  duration?: number
-  /** Multiplied by character count (px) — width of the highlight band in the sweep */
-  spread?: number
+  children: string;
+  as?: ElementType;
+  className?: string;
+  duration?: number;
+  spread?: number;
+  /** Base text color (CSS color or `var(--token)`). Default: theme `muted-foreground`. */
+  color?: string;
+  /** Shimmer highlight sweep color. Default: theme `background`. */
+  shimmerColor?: string;
 }
 
 const ShimmerComponent = ({
   children,
-  as = 'p',
+  as: Component = "p",
   className,
-  textColorVar = 'var(--color-muted-foreground)',
   duration = 2,
   spread = 2,
+  color,
+  shimmerColor,
 }: TextShimmerProps) => {
+  const MotionComponent = getMotionComponent(
+    Component as keyof JSX.IntrinsicElements
+  );
+
   const dynamicSpread = useMemo(
-    () => Math.max(4, (children?.length ?? 0) * spread),
+    () => (children?.length ?? 0) * spread,
     [children, spread]
-  )
+  );
 
-  const Tag = typeof as === 'string' ? as : 'p'
+  return (
+    <MotionComponent
+      animate={{ backgroundPosition: "0% center" }}
+      className={cn(
+        "relative inline-block bg-[length:250%_100%,auto] bg-clip-text text-transparent",
+        "[--bg:linear-gradient(90deg,#0000_calc(50%-var(--spread)),var(--shimmer-sweep,var(--color-background)),#0000_calc(50%+var(--spread)))] [background-repeat:no-repeat,padding-box]",
+        className
+      )}
+      initial={{ backgroundPosition: "100% center" }}
+      style={
+        {
+          "--spread": `${dynamicSpread}px`,
+          ...(color !== undefined && { "--shimmer-text": color }),
+          ...(shimmerColor !== undefined && { "--shimmer-sweep": shimmerColor }),
+          backgroundImage:
+            "var(--bg), linear-gradient(var(--shimmer-text, var(--color-muted-foreground)), var(--shimmer-text, var(--color-muted-foreground)))",
+        } as CSSProperties
+      }
+      transition={{
+        duration,
+        ease: "linear",
+        repeat: Number.POSITIVE_INFINITY,
+      }}
+    >
+      {children}
+    </MotionComponent>
+  );
+};
 
-  return createElement(
-    Tag,
-    {
-      className: cn(
-        'lex-shimmer-pan relative inline-block bg-[length:250%_100%,auto] bg-clip-text',
-        '[--bg:linear-gradient(90deg,#0000_calc(50%-var(--spread)),var(--color-background),#0000_calc(50%+var(--spread)))] [background-repeat:no-repeat,padding-box]',
-        className,
-        'text-transparent'
-      ),
-      style: {
-        '--spread': `${dynamicSpread}px`,
-        '--shimmer-base': textColorVar,
-        '--shimmer-duration': `${duration}s`,
-        backgroundImage:
-          'var(--bg), linear-gradient(var(--shimmer-base), var(--shimmer-base))',
-      } as CSSProperties,
-    },
-    children
-  )
-}
-
-export const Shimmer = memo(ShimmerComponent)
+export const Shimmer = memo(ShimmerComponent);

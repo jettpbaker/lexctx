@@ -1,77 +1,50 @@
 import type { CSSProperties } from 'react'
 
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from '~/components/ui/sidebar'
+import { Suspense } from 'react'
+import CollectionsSidebarClient from '~/components/collections_sidebar_client'
+import { Sidebar, SidebarHeader } from '~/components/ui/sidebar'
+import { Spinner } from '~/components/ui/spinner'
+import { listCollectionsWithSources } from '~/server/actions/sources'
 
-/** 2× default shadcn `--sidebar-width` (16rem), scoped to this rail only */
+import NewCollectionButton from './new_collection_button'
+
 const COLLECTIONS_RAIL_WIDTH = '32rem' as const
 
-const DUMMY_COLLECTIONS = [
-  {
-    name: 'IFB102 — Software Architecture',
-    sources: ['Lecture_01.mp4', 'Lecture_02.mp4', 'Lecture_03.mp4'],
-  },
-  {
-    name: 'IFB103 — Algorithms',
-    sources: ['Week4_Sorting.mp4', 'Problem_set_solutions.pdf'],
-  },
-  {
-    name: 'Personal',
-    sources: ['saved_talk_keynote.mp4'],
-  },
-] as const
-
-const totalSources = DUMMY_COLLECTIONS.reduce((n, c) => n + c.sources.length, 0)
-
-export default function CollectionsSidebar() {
+export default async function CollectionsSidebar() {
   return (
     <div
-      className="hidden h-svh min-h-0 shrink-0 md:block"
+      className='relative z-10 hidden h-svh min-h-0 shrink-0 md:block'
       style={{ '--sidebar-width': COLLECTIONS_RAIL_WIDTH } as CSSProperties}
     >
-    <Sidebar
-      side="right"
-      collapsible="none"
-      className="bg-background text-foreground flex h-full min-h-0 w-(--sidebar-width) shrink-0 flex-col overflow-hidden border-l border-border"
-    >
-      <SidebarHeader className="border-b border-border px-4 py-3">
-        <p className="text-sm font-semibold tracking-tight">Collections</p>
-        <p className="text-muted-foreground text-xs">Preview — dummy data</p>
-      </SidebarHeader>
-      <SidebarContent className="min-h-0 overflow-y-auto">
-        {DUMMY_COLLECTIONS.map((collection) => (
-          <SidebarGroup key={collection.name}>
-            <SidebarGroupLabel className="text-xs">{collection.name}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {collection.sources.map((name) => (
-                  <SidebarMenuItem key={`${collection.name}-${name}`}>
-                    <SidebarMenuButton>
-                      <span className="truncate text-left" title={name}>
-                        {name}
-                      </span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
-      </SidebarContent>
-      <SidebarFooter className="text-muted-foreground border-t border-border p-2 text-center text-xs">
-        {totalSources} sources
-      </SidebarFooter>
-    </Sidebar>
+      <Sidebar
+        side='right'
+        collapsible='none'
+        className='flex h-full min-h-0 w-(--sidebar-width) shrink-0 flex-col overflow-hidden border-l border-border bg-background text-foreground'
+      >
+        <SidebarHeader className='gap-0 p-0'>
+          <div className='flex h-8 items-center justify-between gap-3 px-2'>
+            <h2 className='text-sm text-muted-foreground'>Collections</h2>
+            <NewCollectionButton />
+          </div>
+        </SidebarHeader>
+        <Suspense fallback={<CollectionsSidebarLoading />}>
+          <CollectionsSidebarData />
+        </Suspense>
+      </Sidebar>
+    </div>
+  )
+}
+
+async function CollectionsSidebarData() {
+  const initialCollections = await listCollectionsWithSources()
+
+  return <CollectionsSidebarClient initialCollections={initialCollections} />
+}
+
+function CollectionsSidebarLoading() {
+  return (
+    <div className='flex h-full items-center justify-center'>
+      <Spinner className='size-8' />
     </div>
   )
 }
