@@ -35,6 +35,9 @@ export default function ChatSidebar() {
     <Sidebar>
       <SidebarHeader>
         <div className='h-7' aria-hidden />
+        <Link href='/' className='text-lg font-medium text-foreground/90'>
+          Lex
+        </Link>
         <Link
           href='/chat/new'
           className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'w-full')}

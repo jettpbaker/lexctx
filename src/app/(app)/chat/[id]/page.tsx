@@ -1,16 +1,14 @@
 import { gunzipAsync, LexMessage } from '~/app/api/chat/route'
-import { GenerationStatusType } from '~/db/schema'
 import { getChatById } from '~/server/actions/sources'
 
 import Chat from '../chat'
 
 type ChatPageProps = {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ query?: string }>
 }
 
-async function loadChat(
-  id: string
-): Promise<{ messages: LexMessage[]; generationStatus: GenerationStatusType }> {
+async function loadChat(id: string): Promise<{ messages: LexMessage[] }> {
   const [chat] = await getChatById(id)
 
   if (!chat) {
@@ -22,23 +20,18 @@ async function loadChat(
   const messagesString = await gunzipAsync(messagesGzip)
   const messages = JSON.parse(messagesString)
 
-  return { messages, generationStatus: chat.generationStatus }
+  return { messages }
 }
 
-export default async function ChatPage({ params }: ChatPageProps) {
+export default async function ChatPage({ params, searchParams }: ChatPageProps) {
   const { id } = await params
+  const { query } = await searchParams
 
-  const { messages, generationStatus } = await loadChat(id)
+  if (query) {
+    return <Chat id={id} initialMessages={[]} initialQuery={query} />
+  }
 
-  return (
-    <div className='flex min-h-0 flex-1 flex-col items-center justify-start gap-4 p-6'>
-      <div>
-        <h1 className='text-lg font-medium text-foreground/90'>Chat: {id}</h1>
-        <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-          {JSON.stringify({ messages, generationStatus }, null, 2)}
-        </pre>
-      </div>
-      <Chat id={id} initialMessages={messages} generationStatus={generationStatus} />
-    </div>
-  )
+  const { messages } = await loadChat(id)
+
+  return <Chat id={id} initialMessages={messages} />
 }

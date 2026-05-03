@@ -87,7 +87,6 @@ export const generationStatusEnum = p.pgEnum('generation_status', [
 export const chats = p.pgTable('chats', {
   id: p.text('id').primaryKey(),
   title: p.text('title'),
-  generationStatus: generationStatusEnum('generation_status').notNull().default('submitted'),
   messagesGzipBase64: p.text('messages_gzip_base64').notNull(),
   messageCount: p.integer('message_count').notNull().default(1),
   totalInputTokens: p.bigint('total_input_tokens', { mode: 'number' }),
@@ -101,5 +100,3 @@ export const chats = p.pgTable('chats', {
     .defaultNow()
     .$onUpdate(() => new Date()),
 })
-
-export type GenerationStatusType = (typeof generationStatusEnum.enumValues)[number]

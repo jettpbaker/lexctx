@@ -10,13 +10,7 @@ import {
   consumeStream,
 } from 'ai'
 import { gzip, gunzip } from 'zlib'
-import { GenerationStatusType } from '~/db/schema'
-import {
-  claimIdleChat,
-  claimSubmittedChat,
-  getChatById,
-  upsertChat,
-} from '~/server/actions/sources'
+import { getChatById, upsertChat } from '~/server/actions/sources'
 
 export function gzipAsync(input: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -42,62 +36,38 @@ export function gunzipAsync(input: Buffer): Promise<string> {
   })
 }
 
-async function persistChat(
-  chatId: string,
-  messages: UIMessage[],
-  generationStatus: GenerationStatusType
-) {
+async function persistChat(chatId: string, messages: UIMessage[]) {
   const messageCount = messages.filter((message) => message.role !== 'system').length
   const messagesString = JSON.stringify(messages)
   const messagesGzip = await gzipAsync(messagesString)
   const messagesGzipBase64 = messagesGzip.toString('base64')
 
-  await upsertChat(chatId, messagesGzipBase64, messageCount, generationStatus)
+  await upsertChat(chatId, messagesGzipBase64, messageCount)
 }
 
 export type LexMessage = UIMessage<unknown, UIDataTypes>
 
-export async function loadChat(
-  id: string
-): Promise<{ messages: LexMessage[]; generationStatus: GenerationStatusType }> {
+export async function loadChat(id: string): Promise<{ exists: boolean; messages: LexMessage[] }> {
   const [chat] = await getChatById(id)
 
   if (!chat) {
-    // Todo: handle this
-    throw new Error(`Chat not found: ${id}`)
+    // Chat not found, this is expected to be a new chat.
+    return { exists: false, messages: [] }
   }
 
   const messagesGzip = Buffer.from(chat.messagesGzipBase64, 'base64')
   const messagesString = await gunzipAsync(messagesGzip)
   const messages = JSON.parse(messagesString)
 
-  return { messages, generationStatus: chat.generationStatus }
+  return { exists: true, messages }
 }
 
 export async function POST(req: Request) {
   const { message, id } = await req.json()
 
-  let messages: LexMessage[] = []
+  const chat = await loadChat(id)
 
-  const { messages: previousMessages, generationStatus } = await loadChat(id)
-
-  if (generationStatus === 'submitted') {
-    const [claimedChat] = await claimSubmittedChat(id)
-
-    if (!claimedChat) {
-      return new Response(null, { status: 409 })
-    }
-    messages = previousMessages
-  } else if (generationStatus === 'idle') {
-    const [claimedChat] = await claimIdleChat(id)
-
-    if (!claimedChat) {
-      return new Response(null, { status: 409 })
-    }
-    messages = [...previousMessages, message]
-  } else {
-    return new Response(null, { status: 409 })
-  }
+  const messages: LexMessage[] = chat.exists ? [...chat.messages, message] : [message]
 
   const validatedMessages = await validateUIMessages<LexMessage>({
     messages,
@@ -117,13 +87,12 @@ export async function POST(req: Request) {
     }),
     consumeSseStream: consumeStream,
     onFinish: async ({ messages, isAborted }) => {
-      console.log('finish', { isAborted })
       if (isAborted) {
         // This is expected to be partial.
         // For now, maybe don't persist it as final history.
         return
       }
-      await persistChat(id, messages, 'idle')
+      await persistChat(id, messages)
     },
   })
 }
