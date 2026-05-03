@@ -1,9 +1,9 @@
 'use server'
 
-import { asc, and, desc, eq } from 'drizzle-orm'
+import { asc, desc, eq } from 'drizzle-orm'
 import { unstable_noStore as noStore } from 'next/cache'
 import db from '~/db'
-import { chats, collections, GenerationStatusType, sources, transcriptSegments } from '~/db/schema'
+import { chats, collections, sources, transcriptSegments } from '~/db/schema'
 import { MAX_FILES_PER_UPLOAD } from '~/lib/constants'
 import { CONTENT_HASH_TYPE } from '~/lib/constants'
 
@@ -206,36 +206,16 @@ export async function saveSourceTranscript(
     .where(eq(sources.id, sourceId))
 }
 
-export async function upsertChat(
-  chatId: string,
-  messagesGzipBase64: string,
-  messageCount: number,
-  generationStatus: GenerationStatusType
-) {
+export async function upsertChat(chatId: string, messagesGzipBase64: string, messageCount: number) {
   await db
     .insert(chats)
-    .values({ id: chatId, messagesGzipBase64, messageCount, generationStatus })
+    .values({ id: chatId, messagesGzipBase64, messageCount })
     .onConflictDoUpdate({
       target: chats.id,
-      set: { messagesGzipBase64, messageCount, generationStatus },
+      set: { messagesGzipBase64, messageCount },
     })
 }
 
 export async function getChatById(chatId: string) {
   return await db.select().from(chats).where(eq(chats.id, chatId)).limit(1)
-}
-
-export async function claimIdleChat(chatId: string) {
-  return await db
-    .update(chats)
-    .set({ generationStatus: 'generating' })
-    .where(and(eq(chats.id, chatId), eq(chats.generationStatus, 'idle')))
-    .returning({ id: chats.id, generationStatus: chats.generationStatus })
-}
-export async function claimSubmittedChat(chatId: string) {
-  return await db
-    .update(chats)
-    .set({ generationStatus: 'generating' })
-    .where(and(eq(chats.id, chatId), eq(chats.generationStatus, 'submitted')))
-    .returning({ id: chats.id, generationStatus: chats.generationStatus })
 }
