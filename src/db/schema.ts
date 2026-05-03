@@ -77,15 +77,23 @@ export const transcriptSegments = p.pgTable(
   ]
 )
 
+export const generationStatusEnum = p.pgEnum('generation_status', [
+  'idle',
+  'submitted',
+  'generating',
+  'failed',
+])
+
 export const chats = p.pgTable('chats', {
-  id: p.uuid('id').primaryKey().defaultRandom(),
+  id: p.text('id').primaryKey(),
   title: p.text('title'),
+  generationStatus: generationStatusEnum('generation_status').notNull().default('submitted'),
   messagesGzipBase64: p.text('messages_gzip_base64').notNull(),
-  messageCount: p.integer('message_count').notNull().default(0),
-  totalInputTokens: p.bigint('total_input_tokens', { mode: 'number' }).notNull().default(0),
-  totalOutputTokens: p.bigint('total_output_tokens', { mode: 'number' }).notNull().default(0),
-  totalTokens: p.bigint('total_tokens', { mode: 'number' }).notNull().default(0),
-  totalCostMicroUsd: p.bigint('total_cost_micro_usd', { mode: 'number' }).notNull().default(0),
+  messageCount: p.integer('message_count').notNull().default(1),
+  totalInputTokens: p.bigint('total_input_tokens', { mode: 'number' }),
+  totalOutputTokens: p.bigint('total_output_tokens', { mode: 'number' }),
+  totalTokens: p.bigint('total_tokens', { mode: 'number' }),
+  totalCostMicroUsd: p.bigint('total_cost_micro_usd', { mode: 'number' }),
   createdAt: p.timestamp('created_at').notNull().defaultNow(),
   updatedAt: p
     .timestamp('updated_at')
@@ -93,3 +101,5 @@ export const chats = p.pgTable('chats', {
     .defaultNow()
     .$onUpdate(() => new Date()),
 })
+
+export type GenerationStatusType = (typeof generationStatusEnum.enumValues)[number]

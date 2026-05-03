@@ -1,0 +1,2 @@
+CREATE TYPE "public"."generation_status" AS ENUM('idle', 'submitted', 'generating', 'failed');--> statement-breakpoint
+ALTER TABLE "chats" ADD COLUMN "generation_status" "generation_status" DEFAULT 'submitted' NOT NULL;

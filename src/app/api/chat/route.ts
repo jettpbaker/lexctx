@@ -3,17 +3,20 @@ import {
   streamText,
   UIMessage,
   convertToModelMessages,
-  tool,
   stepCountIs,
   validateUIMessages,
-  InferUITools,
   UIDataTypes,
   createIdGenerator,
   consumeStream,
 } from 'ai'
 import { gzip, gunzip } from 'zlib'
-import { z } from 'zod'
-import { getChatById, upsertChat } from '~/server/actions/sources'
+import { GenerationStatusType } from '~/db/schema'
+import {
+  claimIdleChat,
+  claimSubmittedChat,
+  getChatById,
+  upsertChat,
+} from '~/server/actions/sources'
 
 export function gzipAsync(input: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -39,77 +42,71 @@ export function gunzipAsync(input: Buffer): Promise<string> {
   })
 }
 
-async function persistChat(chatId: string, messages: UIMessage[]) {
+async function persistChat(
+  chatId: string,
+  messages: UIMessage[],
+  generationStatus: GenerationStatusType
+) {
   const messageCount = messages.filter((message) => message.role !== 'system').length
   const messagesString = JSON.stringify(messages)
   const messagesGzip = await gzipAsync(messagesString)
   const messagesGzipBase64 = messagesGzip.toString('base64')
 
-  await upsertChat(chatId, messagesGzipBase64, messageCount)
+  await upsertChat(chatId, messagesGzipBase64, messageCount, generationStatus)
 }
 
-const tools = {
-  weather: tool({
-    description: 'Get weather information',
-    inputSchema: z.object({
-      location: z.string(),
-      units: z.enum(['celsius', 'fahrenheit']),
-    }),
-    execute: async ({ location, units }) => {
-      const temperature = Math.round(Math.random() * (90 - 32) + 32)
-      return {
-        location,
-        temperature: units === 'fahrenheit' ? temperature : (temperature - 32) * (5 / 9),
-      }
-    },
-  }),
-  convertFahrenheitToCelsius: tool({
-    description: 'Convert a temperature in fahrenheit to celsius',
-    inputSchema: z.object({
-      temperature: z.number().describe('The temperature in fahrenheit to convert'),
-    }),
-    execute: async ({ temperature }) => {
-      const celsius = Math.round((temperature - 32) * (5 / 9))
-      return {
-        celsius,
-      }
-    },
-  }),
-}
+export type LexMessage = UIMessage<unknown, UIDataTypes>
 
-type ScratchTools = InferUITools<typeof tools>
-export type ScratchMessage = UIMessage<unknown, UIDataTypes, ScratchTools>
-
-export async function loadChat(id: string): Promise<ScratchMessage[]> {
+export async function loadChat(
+  id: string
+): Promise<{ messages: LexMessage[]; generationStatus: GenerationStatusType }> {
   const [chat] = await getChatById(id)
 
   if (!chat) {
-    return []
+    // Todo: handle this
+    throw new Error(`Chat not found: ${id}`)
   }
 
   const messagesGzip = Buffer.from(chat.messagesGzipBase64, 'base64')
   const messagesString = await gunzipAsync(messagesGzip)
   const messages = JSON.parse(messagesString)
 
-  return messages
+  return { messages, generationStatus: chat.generationStatus }
 }
 
 export async function POST(req: Request) {
   const { message, id } = await req.json()
 
-  const previousMessages = await loadChat(id)
-  const messages = [...previousMessages, message]
+  let messages: LexMessage[] = []
 
-  const validatedMessages = await validateUIMessages<ScratchMessage>({
+  const { messages: previousMessages, generationStatus } = await loadChat(id)
+
+  if (generationStatus === 'submitted') {
+    const [claimedChat] = await claimSubmittedChat(id)
+
+    if (!claimedChat) {
+      return new Response(null, { status: 409 })
+    }
+    messages = previousMessages
+  } else if (generationStatus === 'idle') {
+    const [claimedChat] = await claimIdleChat(id)
+
+    if (!claimedChat) {
+      return new Response(null, { status: 409 })
+    }
+    messages = [...previousMessages, message]
+  } else {
+    return new Response(null, { status: 409 })
+  }
+
+  const validatedMessages = await validateUIMessages<LexMessage>({
     messages,
-    tools, // Ensures tool calls in messages match current schemas
   })
 
   const result = streamText({
     model: openai('gpt-5.4-nano'),
     messages: await convertToModelMessages(validatedMessages),
     stopWhen: stepCountIs(5),
-    tools,
   })
 
   return result.toUIMessageStreamResponse({
@@ -126,7 +123,7 @@ export async function POST(req: Request) {
         // For now, maybe don't persist it as final history.
         return
       }
-      await persistChat(id, messages)
+      await persistChat(id, messages, 'idle')
     },
   })
 }

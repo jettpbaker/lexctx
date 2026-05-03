@@ -1,22 +1,13 @@
 import { generateId } from 'ai'
-import { existsSync, mkdirSync } from 'fs'
-import { writeFile } from 'fs/promises'
 import { redirect } from 'next/navigation'
-import path from 'path'
+import { upsertChat } from '~/server/actions/sources'
 
-export async function createChat(): Promise<string> {
-  const id = generateId() // generate a unique chat ID
-  await writeFile(getChatFile(id), '[]') // create an empty chat file
-  return id
-}
-
-export function getChatFile(id: string): string {
-  const chatDir = path.join(process.cwd(), '.chats')
-  if (!existsSync(chatDir)) mkdirSync(chatDir, { recursive: true })
-  return path.join(chatDir, `${id}.json`)
-}
+import { gzipAsync } from '../api/scratchChat/route'
 
 export default async function Chat() {
-  const id = await createChat()
+  const id = generateId()
+  const messagesGzip = await gzipAsync('[]')
+  const messagesGzipBase64 = messagesGzip.toString('base64')
+  await upsertChat(id, messagesGzipBase64, 0)
   redirect(`/scratchChat/${id}`)
 }
