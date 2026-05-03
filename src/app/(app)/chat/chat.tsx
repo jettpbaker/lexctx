@@ -112,7 +112,7 @@ export default function Chat({
 
   return (
     <div className='stretch mx-auto flex w-full max-w-md flex-col py-24'>
-      <h1 className='text-lg font-medium text-foreground/90'>ScratchChat: {id}</h1>
+      <h1 className='text-lg font-medium text-foreground/90'>Chat: {id}</h1>
       {homeSubmitToVisibleMs !== null ? (
         <p className='text-xs text-muted-foreground'>
           Home submit → your message visible ~ {(homeSubmitToVisibleMs / 1000).toFixed(2)}s

@@ -4,9 +4,8 @@ import type { UIMessage } from 'ai'
 
 import { generateId } from 'ai'
 import { redirect } from 'next/navigation'
+import { gzipAsync } from '~/app/api/chat/route'
 import { upsertChat } from '~/server/actions/sources'
-
-import { gzipAsync } from '../api/scratchChat/route'
 
 export async function startChatFromHome(formData: FormData) {
   const message = formData.get('message')
