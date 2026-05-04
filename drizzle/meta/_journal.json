@@ -120,6 +120,13 @@
       "when": 1777876211051,
       "tag": "0016_ambitious_zombie",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1777883178519,
+      "tag": "0017_clear_chronomancer",
+      "breakpoints": true
     }
   ]
 }

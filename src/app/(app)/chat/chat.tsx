@@ -4,6 +4,7 @@ import type { LexMessage } from '~/app/api/chat/route'
 
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 export default function Chat({
@@ -15,6 +16,7 @@ export default function Chat({
   initialMessages: LexMessage[]
   initialQuery?: string
 }) {
+  const router = useRouter()
   const [input, setInput] = useState('')
   const hasAppendedQuery = useRef(false)
 
@@ -27,6 +29,9 @@ export default function Chat({
         return { body: { id, message: messages.at(-1) } }
       },
     }),
+    onFinish() {
+      router.refresh()
+    },
   })
 
   useEffect(() => {
