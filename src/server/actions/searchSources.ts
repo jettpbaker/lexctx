@@ -1,8 +1,8 @@
 'use server'
 
-import { search } from '~/db/chroma'
+import { hybridSearch } from '~/db/chroma'
 
 export async function searchSources(query: string) {
-  const results = await search(query)
+  const results = await hybridSearch(query)
   return results
 }

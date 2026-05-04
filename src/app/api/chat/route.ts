@@ -10,8 +10,8 @@ import {
   consumeStream,
 } from 'ai'
 import { gzip, gunzip } from 'zlib'
-import z from 'zod'
 import { getChatById, upsertChat } from '~/server/actions/sources'
+import { chatTools } from '~/server/ai/tools'
 
 export function gzipAsync(input: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -79,23 +79,10 @@ export async function POST(req: Request) {
     providerOptions: {
       openai: {
         reasoningEffort: 'medium',
-        // forceReasoning: true,
         reasoningSummary: 'auto',
       } satisfies OpenAILanguageModelResponsesOptions,
     },
-    tools: {
-      weather: {
-        description: 'Get the weather for a given location',
-        inputSchema: z.object({
-          location: z.string(),
-        }),
-        execute: async ({ location }) => {
-          return {
-            weather: 'sunny',
-          }
-        },
-      },
-    },
+    tools: chatTools,
     messages: await convertToModelMessages(validatedMessages),
     stopWhen: stepCountIs(5),
   })

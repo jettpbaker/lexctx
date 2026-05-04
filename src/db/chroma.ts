@@ -124,10 +124,20 @@ function createSearch(query: string) {
   return new Search()
     .rank(hybridRank(query))
     .limit(10)
-    .select(K.DOCUMENT, K.SCORE, 'sourceName', 'startSeconds', 'endSeconds')
+    .select(
+      K.DOCUMENT,
+      K.SCORE,
+      'chunkIndex',
+      'collectionId',
+      'collectionName',
+      'sourceId',
+      'sourceName',
+      'startSeconds',
+      'endSeconds'
+    )
 }
 
-export async function search(query: string) {
+export async function hybridSearch(query: string) {
   const collection = await getLectureChunksCollection()
 
   const search = createSearch(query)

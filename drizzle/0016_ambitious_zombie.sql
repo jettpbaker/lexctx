@@ -1,0 +1,2 @@
+CREATE INDEX "transcript_chunks_source_id_idx" ON "transcript_chunks" USING btree ("source_id");--> statement-breakpoint
+ALTER TABLE "transcript_chunks" ADD CONSTRAINT "transcript_chunks_source_id_chunk_index_unique" UNIQUE("source_id","chunk_index");
