@@ -19,7 +19,7 @@ export default async function CollectionsSidebar() {
       <Sidebar
         side='right'
         collapsible='none'
-        className='flex h-full min-h-0 w-(--sidebar-width) shrink-0 flex-col overflow-hidden border-l border-border bg-background text-foreground'
+        className='flex h-full min-h-0 w-(--sidebar-width) shrink-0 flex-col overflow-hidden border-l border-border text-foreground'
       >
         <SidebarHeader className='gap-0 p-0'>
           <div className='flex h-8 items-center justify-between gap-3 px-2'>

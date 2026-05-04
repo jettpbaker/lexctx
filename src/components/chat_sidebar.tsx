@@ -1,78 +1,76 @@
-'use client'
-
+import { Add01Icon } from '@hugeicons/core-free-icons'
+import { HugeiconsIcon } from '@hugeicons/react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { Suspense } from 'react'
 import { buttonVariants } from '~/components/ui/button'
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
+  SidebarTrigger,
 } from '~/components/ui/sidebar'
+import { Spinner } from '~/components/ui/spinner'
 import { cn } from '~/lib/utils'
+import { getAllChats } from '~/server/actions/sources'
 
-const DUMMY_CHATS = [
-  { id: 'contract-review-acme', title: 'Contract review — Acme Corp' },
-  { id: 'motion-to-dismiss', title: 'Motion to dismiss draft' },
-  { id: 'discovery-followup', title: 'Discovery: follow-up questions' },
-  { id: 'case-law-smith-jones', title: 'Case law: Smith v. Jones' },
-  { id: 'depo-prep-witness-a', title: 'Deposition prep — witness A' },
-  { id: 'emails-opposing', title: 'Email thread with opposing counsel' },
-  { id: 'settlement-term', title: 'Settlement term sheet' },
-  { id: 'local-rules', title: 'Local rules & deadlines' },
-] as const
+import ChatSidebarClient from './chat_sidebar_client'
 
 export default function ChatSidebar() {
-  const pathname = usePathname()
-
   return (
     <Sidebar>
-      <SidebarHeader>
+      <SidebarTrigger className='fixed top-3 left-3 z-50' />
+
+      <SidebarHeader className='p-3'>
         <div className='h-7' aria-hidden />
-        <Link href='/' className='text-lg font-medium text-foreground/90'>
-          Lex
-        </Link>
         <Link
-          href='/chat/new'
-          className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'w-full')}
+          href='/'
+          aria-label='New chat'
+          className={cn(
+            buttonVariants({ size: 'lg' }),
+            'group/new-chat relative w-full overflow-hidden text-sm'
+          )}
         >
-          + New chat
+          <span className='grid place-items-center'>
+            <span
+              aria-hidden
+              className='col-start-1 row-start-1 transition duration-150 ease-[var(--ease-out-quart)] motion-reduce:-translate-y-0 motion-reduce:opacity-100 motion-reduce:transition-none [@media(hover:hover)_and_(pointer:fine)]:group-hover/new-chat:-translate-y-[120%] [@media(hover:hover)_and_(pointer:fine)]:group-hover/new-chat:opacity-0'
+            >
+              New Chat
+            </span>
+            <HugeiconsIcon
+              icon={Add01Icon}
+              strokeWidth={2.5}
+              aria-hidden
+              className='col-start-1 row-start-1 translate-y-[120%] opacity-0 transition duration-150 ease-[var(--ease-out-quart)] motion-reduce:translate-y-[120%] motion-reduce:opacity-0 motion-reduce:transition-none [@media(hover:hover)_and_(pointer:fine)]:group-hover/new-chat:translate-y-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover/new-chat:opacity-100'
+            />
+          </span>
         </Link>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Recent</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {DUMMY_CHATS.map((chat) => {
-                const href = `/chat/${chat.id}`
-                const isActive = pathname === href
-
-                return (
-                  <SidebarMenuItem key={chat.id}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      render={<Link href={href} prefetch={false} />}
-                      tooltip={chat.title}
-                    >
-                      <span className='truncate'>{chat.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
-            </SidebarMenu>
+            <Suspense fallback={<ChatSidebarLoading />}>
+              <ChatSidebarData />
+            </Suspense>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className='border-t border-sidebar-border p-2 text-center text-xs text-sidebar-foreground/50'>
-        Lex
-      </SidebarFooter>
     </Sidebar>
+  )
+}
+
+async function ChatSidebarData() {
+  const initialChats = await getAllChats()
+
+  return <ChatSidebarClient initialChats={initialChats} />
+}
+
+function ChatSidebarLoading() {
+  return (
+    <div className='flex h-24 items-center justify-center'>
+      <Spinner className='size-6' />
+    </div>
   )
 }

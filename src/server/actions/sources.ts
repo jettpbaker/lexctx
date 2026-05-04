@@ -238,6 +238,23 @@ export async function saveSourceTranscript(
     .where(eq(sources.id, sourceId))
 }
 
+export type ChatType = {
+  id: string
+  title: string | null
+}
+
+export async function getAllChats(): Promise<ChatType[]> {
+  noStore()
+
+  return db
+    .select({
+      id: chats.id,
+      title: chats.title,
+    })
+    .from(chats)
+    .orderBy(desc(chats.createdAt), asc(chats.id))
+}
+
 export async function upsertChat(chatId: string, messagesGzipBase64: string, messageCount: number) {
   await db
     .insert(chats)
