@@ -14,7 +14,8 @@ export default async function AppShellLayout({ children }: { children: React.Rea
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
       <ChatSidebar />
-      <main className='relative flex min-h-svh w-full min-w-0 flex-1 flex-col bg-background'>
+      <main className='relative flex h-dvh w-full min-w-0 flex-1 flex-col bg-background'>
+        {/* <main className='bg-background'> */}
         {children}
       </main>
       <CollectionsSidebar />

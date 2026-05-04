@@ -36,7 +36,7 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.5rem;
-  --conversation-width: 700px;
+  --conversation-width: 750px;
   --sidebar: var(--background);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -46,6 +46,7 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
   --scrollbar: var(--sidebar-accent);
+  --message-scrollbar: oklch(0.82 0 0);
 
   --ease-in-quad: cubic-bezier(0.55, 0.085, 0.68, 0.53);
   --ease-in-cubic: cubic-bezier(0.55, 0.055, 0.675, 0.19);
@@ -99,7 +100,8 @@
   --sidebar-accent-foreground: oklch(0.861 0.0014 286.37);
   --sidebar-border: oklch(0.2768 0 0);
   --sidebar-ring: oklch(0.861 0.0014 286.37);
-  --scrollbar: var(--sidebar-accent);
+  --scrollbar: var(--card);
+  --message-scrollbar: oklch(0.35 0 0);
 }
 
 * {
