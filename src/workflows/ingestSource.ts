@@ -14,6 +14,7 @@ import {
 import deleteSourceAudio from '~/server/actions/deleteSourceAudio'
 import {
   getSourceIndexMetadata,
+  upsertRagChunks,
   markSourceFailed,
   markSourceReady,
   saveFalRequestId,
@@ -70,12 +71,7 @@ export async function ingestSource(id: string, url: string, key: string) {
     }
   }
 
-  if (!transcript) {
-    await persistSourceFailed(id, 'Transcription timed out')
-    return
-  }
-
-  if (!transcript.data.chunks) {
+  if (!transcript?.data.chunks) {
     await persistSourceFailed(id, 'Transcription returned no chunks')
     return
   }
@@ -93,9 +89,9 @@ export async function ingestSource(id: string, url: string, key: string) {
   }
 
   const chunks = await createRagChunks(transcriptSegments)
+  await persistRagChunks(id, chunks)
 
   const sourceMetadata = await loadSourceIndexMetadata(id)
-
   await indexRagChunks(sourceMetadata, chunks)
 
   await persistSourceReady(id)
@@ -174,6 +170,12 @@ async function createRagChunks(segments: TranscriptSegmentForChunking[]) {
   'use step'
 
   return chunkTranscriptSegments(segments)
+}
+
+async function persistRagChunks(sourceId: string, chunks: RagChunk[]) {
+  'use step'
+
+  await upsertRagChunks(sourceId, chunks)
 }
 
 async function loadSourceIndexMetadata(sourceId: string) {

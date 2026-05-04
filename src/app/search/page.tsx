@@ -1,0 +1,46 @@
+'use client'
+
+import type { SearchResultRow } from 'chromadb'
+
+import { useEffect, useState, type SubmitEvent } from 'react'
+import { searchSources } from '~/server/actions/searchSources'
+
+export default function SearchPage() {
+  const [searchResults, setSearchResults] = useState<SearchResultRow[]>([])
+
+  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    const query = formData.get('query')
+    if (!query || typeof query !== 'string') {
+      return
+    }
+
+    e.currentTarget.reset()
+
+    const results = await searchSources(query)
+    setSearchResults(results)
+  }
+
+  useEffect(() => {
+    console.log(searchResults)
+  }, [searchResults])
+
+  return (
+    <div className='flex h-full w-full flex-col items-center justify-center p-8'>
+      <div>
+        <h2>Search Result:</h2>
+        {/* Use whitespace-pre-wrap and break-words to preserve whitespace and wrap lines */}
+        <div className='h-fit max-h-96 w-full overflow-y-auto'>
+          <pre className='wrap-break-words max-w-1/2 overflow-x-auto text-xs whitespace-pre-wrap'>
+            {JSON.stringify(searchResults, null, 2)}
+          </pre>
+        </div>
+      </div>
+      <form onSubmit={(e) => handleSubmit(e)} className='mt-auto'>
+        <input type='text' name='query' placeholder='Search' />
+        <button type='submit'>Search</button>
+      </form>
+    </div>
+  )
+}

@@ -77,6 +77,28 @@ export const transcriptSegments = p.pgTable(
   ]
 )
 
+export const ragChunks = p.pgTable(
+  'transcript_chunks',
+  {
+    id: p.uuid('id').primaryKey().defaultRandom(),
+    sourceId: p
+      .uuid('source_id')
+      .notNull()
+      .references(() => sources.id, { onDelete: 'cascade' }),
+    chunkIndex: p.integer('chunk_index').notNull(),
+    text: p.text('text').notNull(),
+    startSeconds: p.doublePrecision('start_seconds').notNull(),
+    endSeconds: p.doublePrecision('end_seconds').notNull(),
+    segmentStartIndex: p.integer('segment_start_index').notNull(),
+    segmentEndIndex: p.integer('segment_end_index').notNull(),
+    createdAt: p.timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    p.unique().on(table.sourceId, table.chunkIndex),
+    p.index('transcript_chunks_source_id_idx').on(table.sourceId),
+  ]
+)
+
 export const generationStatusEnum = p.pgEnum('generation_status', [
   'idle',
   'submitted',

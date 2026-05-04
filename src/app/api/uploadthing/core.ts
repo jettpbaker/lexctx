@@ -22,6 +22,7 @@ export const fileRouter = {
       // This code RUNS ON YOUR SERVER after upload
       try {
         await markSourceAudioUploaded(metadata.sourceId, file.ufsUrl, file.key)
+        console.log({ sourceId: metadata.sourceId, fileUrl: file.ufsUrl, key: file.key })
         await start(ingestSource, [metadata.sourceId, file.ufsUrl, file.key])
       } catch (error) {
         console.error(`Error starting transcription workflow, ${error}`)

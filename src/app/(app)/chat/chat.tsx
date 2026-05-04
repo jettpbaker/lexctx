@@ -49,10 +49,41 @@ export default function Chat({
             {message.parts.map((part, i) => {
               switch (part.type) {
                 case 'text':
-                  return <div key={`${message.id}-${i}`}>{part.text}</div>
+                  return (
+                    <div
+                      key={`${message.id}-${i}`}
+                      style={{ color: '#1a8cff' }} // blue-ish for 'text'
+                    >
+                      {part.text}
+                    </div>
+                  )
+                case 'reasoning':
+                  return (
+                    <div
+                      key={`${message.id}-${i}`}
+                      style={{ color: '#878a00' }} // olive for 'reasoning'
+                    >
+                      {part.text}
+                    </div>
+                  )
                 case 'tool-weather':
+                  return (
+                    <pre
+                      key={`${message.id}-${i}`}
+                      style={{ color: '#00af54' }} // green for 'tool-weather'
+                    >
+                      {JSON.stringify(part, null, 2)}
+                    </pre>
+                  )
                 case 'tool-convertFahrenheitToCelsius':
-                  return <pre key={`${message.id}-${i}`}>{JSON.stringify(part, null, 2)}</pre>
+                  return (
+                    <pre
+                      key={`${message.id}-${i}`}
+                      style={{ color: '#cf46b2' }} // magenta for 'tool-convertFahrenheitToCelsius'
+                    >
+                      {JSON.stringify(part, null, 2)}
+                    </pre>
+                  )
               }
             })}
           </div>

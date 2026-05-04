@@ -1,11 +1,12 @@
 'use server'
 
-import { asc, desc, eq } from 'drizzle-orm'
+import { asc, desc, eq, and, gte, lte } from 'drizzle-orm'
 import { unstable_noStore as noStore } from 'next/cache'
 import db from '~/db'
-import { chats, collections, sources, transcriptSegments } from '~/db/schema'
+import { chats, collections, ragChunks, sources, transcriptSegments } from '~/db/schema'
 import { MAX_FILES_PER_UPLOAD } from '~/lib/constants'
 import { CONTENT_HASH_TYPE } from '~/lib/constants'
+import { RagChunk } from '~/lib/rag/chunkTranscriptSegments'
 
 type TranscriptSegmentInput = {
   index: number
@@ -43,7 +44,38 @@ export async function deleteCollectionById(id: string) {
 }
 
 export async function listSourcesForCollection(collectionId: string) {
-  return db.select().from(sources).where(eq(sources.collectionId, collectionId))
+  return db
+    .select({
+      id: sources.id,
+      name: sources.name,
+      collectionId: sources.collectionId,
+      collectionName: collections.name,
+      createdAt: sources.createdAt,
+      updatedAt: sources.updatedAt,
+    })
+    .from(sources)
+    .innerJoin(collections, eq(sources.collectionId, collections.id))
+    .where(eq(sources.collectionId, collectionId))
+    .orderBy(desc(sources.createdAt), asc(sources.id))
+}
+
+export async function listAllSources() {
+  return db
+    .select({
+      id: sources.id,
+      name: sources.name,
+      collectionId: sources.collectionId,
+      collectionName: collections.name,
+      createdAt: sources.createdAt,
+      updatedAt: sources.updatedAt,
+    })
+    .from(sources)
+    .orderBy(desc(sources.createdAt), asc(sources.id))
+    .innerJoin(collections, eq(sources.collectionId, collections.id))
+}
+
+export async function listAllCollections() {
+  return db.select().from(collections).orderBy(desc(collections.createdAt), asc(collections.id))
 }
 
 export async function listCollectionsWithSources() {
@@ -218,4 +250,54 @@ export async function upsertChat(chatId: string, messagesGzipBase64: string, mes
 
 export async function getChatById(chatId: string) {
   return await db.select().from(chats).where(eq(chats.id, chatId)).limit(1)
+}
+
+export async function upsertRagChunks(sourceId: string, chunks: RagChunk[]) {
+  await db.delete(ragChunks).where(eq(ragChunks.sourceId, sourceId))
+  await db.insert(ragChunks).values(
+    chunks.map((chunk) => ({
+      sourceId,
+      chunkIndex: chunk.index,
+      text: chunk.text,
+      startSeconds: chunk.startSeconds,
+      endSeconds: chunk.endSeconds,
+      segmentStartIndex: chunk.segmentStartIndex,
+      segmentEndIndex: chunk.segmentEndIndex,
+    }))
+  )
+}
+
+export async function getNearbyRagChunks(
+  sourceId: string,
+  chunkIndex: number,
+  before: number,
+  after: number
+) {
+  const lowerBound = Math.max(0, chunkIndex - before)
+  const upperBound = chunkIndex + after
+
+  return await db
+    .select({
+      document: ragChunks.text,
+      chunkIndex: ragChunks.chunkIndex,
+      sourceId: sources.id,
+      sourceName: sources.name,
+      collectionId: collections.id,
+      collectionName: collections.name,
+      startSeconds: ragChunks.startSeconds,
+      endSeconds: ragChunks.endSeconds,
+      segmentStartIndex: ragChunks.segmentStartIndex,
+      segmentEndIndex: ragChunks.segmentEndIndex,
+    })
+    .from(ragChunks)
+    .where(
+      and(
+        eq(ragChunks.sourceId, sourceId),
+        gte(ragChunks.chunkIndex, lowerBound),
+        lte(ragChunks.chunkIndex, upperBound)
+      )
+    )
+    .innerJoin(sources, eq(ragChunks.sourceId, sources.id))
+    .innerJoin(collections, eq(sources.collectionId, collections.id))
+    .orderBy(asc(ragChunks.chunkIndex))
 }

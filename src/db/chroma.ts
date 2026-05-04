@@ -3,7 +3,16 @@ import type { RagChunk } from '~/lib/rag/chunkTranscriptSegments'
 
 import { ChromaCloudSpladeEmbeddingFunction } from '@chroma-core/chroma-cloud-splade'
 import { OpenAIEmbeddingFunction } from '@chroma-core/openai'
-import { CloudClient, K, Schema, SparseVectorIndexConfig, VectorIndexConfig } from 'chromadb'
+import {
+  CloudClient,
+  K,
+  Knn,
+  Rrf,
+  Schema,
+  Search,
+  SparseVectorIndexConfig,
+  VectorIndexConfig,
+} from 'chromadb'
 import { env } from '~/env'
 
 const LECTURE_CHUNKS_COLLECTION = 'lecture_chunks_v1'
@@ -99,4 +108,41 @@ export async function deleteLectureChunks(sourceId: string) {
       sourceId,
     },
   })
+}
+
+function hybridRank(query: string) {
+  const rank = Rrf({
+    ranks: [
+      Knn({ query, returnRank: true, limit: 300 }),
+      Knn({ query, key: SPARSE_EMBEDDING_KEY, returnRank: true, limit: 300 }),
+    ],
+  })
+  return rank
+}
+
+function createSearch(query: string) {
+  return new Search()
+    .rank(hybridRank(query))
+    .limit(10)
+    .select(
+      K.DOCUMENT,
+      K.SCORE,
+      'chunkIndex',
+      'collectionId',
+      'collectionName',
+      'sourceId',
+      'sourceName',
+      'startSeconds',
+      'endSeconds'
+    )
+}
+
+export async function hybridSearch(query: string) {
+  const collection = await getLectureChunksCollection()
+
+  const search = createSearch(query)
+  const results = await collection.search(search)
+
+  const rows = results.rows()[0]
+  return rows
 }

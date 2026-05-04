@@ -1,4 +1,4 @@
-import { openai } from '@ai-sdk/openai'
+import { openai, OpenAILanguageModelResponsesOptions } from '@ai-sdk/openai'
 import {
   streamText,
   UIMessage,
@@ -11,6 +11,7 @@ import {
 } from 'ai'
 import { gzip, gunzip } from 'zlib'
 import { getChatById, upsertChat } from '~/server/actions/sources'
+import { chatTools } from '~/server/ai/tools'
 
 export function gzipAsync(input: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -75,6 +76,13 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: openai('gpt-5.4-nano'),
+    providerOptions: {
+      openai: {
+        reasoningEffort: 'medium',
+        reasoningSummary: 'auto',
+      } satisfies OpenAILanguageModelResponsesOptions,
+    },
+    tools: chatTools,
     messages: await convertToModelMessages(validatedMessages),
     stopWhen: stepCountIs(5),
   })
