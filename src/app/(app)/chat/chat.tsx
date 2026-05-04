@@ -3,7 +3,7 @@
 import type { LexMessage } from '~/app/api/chat/route'
 
 import { useChat } from '@ai-sdk/react'
-import { DefaultChatTransport } from 'ai'
+import { DefaultChatTransport, UIMessage } from 'ai'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import {
@@ -12,6 +12,8 @@ import {
   ConversationEmptyState,
 } from '~/components/ai-elements/conversation'
 import { Message, MessageContent, MessageResponse } from '~/components/ai-elements/message'
+import { Reasoning, ReasoningContent, ReasoningTrigger } from '~/components/ai-elements/reasoning'
+import { Shimmer } from '~/components/ai-elements/shimmer'
 import { ChatComposer } from '~/components/chatComposer'
 
 export default function Chat({
@@ -33,7 +35,13 @@ export default function Chat({
     transport: new DefaultChatTransport({
       api: '/api/chat',
       prepareSendMessagesRequest({ id, messages }) {
-        return { body: { id, message: messages.at(-1) } }
+        return {
+          body: {
+            id,
+            message: messages.at(-1),
+            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          },
+        }
       },
     }),
     onFinish() {
@@ -59,6 +67,14 @@ export default function Chat({
     setText('')
   }
 
+  const latestMessage = messages.at(-1)
+  const latestAssistantHasVisibleParts =
+    latestMessage?.role === 'assistant' && hasVisibleAssistantParts(latestMessage)
+  const isWaitingForVisibleAssistantOutput =
+    (status === 'submitted' || status === 'streaming') &&
+    (latestMessage?.role === 'user' ||
+      (latestMessage?.role === 'assistant' && !latestAssistantHasVisibleParts))
+
   return (
     <div className='relative flex h-dvh min-h-0 w-full flex-1 flex-col overflow-hidden pt-[36px]'>
       <Conversation>
@@ -70,26 +86,38 @@ export default function Chat({
             />
           )}
           {messages.length > 0 &&
-            messages.map(({ role, parts }, index) => (
-              <Message from={role} key={index}>
-                <MessageContent>
-                  {parts.map((part, i) => {
-                    switch (part.type) {
-                      case 'text':
-                        return <MessageResponse key={`${role}-${i}`}>{part.text}</MessageResponse>
-                      case 'tool-webSearch':
-                        if (part.state === 'input-streaming' || part.state === 'input-available') {
-                          return <span key={`${role}-${i}`}>Searching the web...</span>
-                        }
+            messages.map((message, index) => {
+              const isLastMessage = index === messages.length - 1
+              const isEmptyLatestAssistantMessage =
+                isWaitingForVisibleAssistantOutput &&
+                isLastMessage &&
+                message.role === 'assistant' &&
+                !hasVisibleAssistantParts(message)
 
-                        if (part.state === 'output-available') {
-                          return <span key={`${role}-${i}`}> Searched the web</span>
-                        }
-                    }
-                  })}
-                </MessageContent>
-              </Message>
-            ))}
+              if (isEmptyLatestAssistantMessage) {
+                return null
+              }
+
+              return (
+                <Message from={message.role} key={index}>
+                  <MessageContent>
+                    <MessageParts
+                      message={message}
+                      isLastMessage={isLastMessage}
+                      isStreaming={status === 'streaming'}
+                    />
+                  </MessageContent>
+                </Message>
+              )
+            })}
+
+          {isWaitingForVisibleAssistantOutput && (
+            <Message from='assistant'>
+              <MessageContent>
+                <Shimmer>Planning next steps</Shimmer>
+              </MessageContent>
+            </Message>
+          )}
         </ConversationContent>
       </Conversation>
 
@@ -97,5 +125,65 @@ export default function Chat({
         <ChatComposer value={text} status={status} onChange={setText} onSubmit={handleSubmit} />
       </div>
     </div>
+  )
+}
+
+function hasVisibleAssistantParts(message: UIMessage) {
+  return message.parts.some((part) => {
+    if (part.type === 'text' || part.type === 'reasoning') {
+      return part.text.trim().length > 0
+    }
+    return part.type.startsWith('tool-')
+  })
+}
+
+const MessageParts = ({
+  message,
+  isLastMessage,
+  isStreaming,
+}: {
+  message: UIMessage
+  isLastMessage: boolean
+  isStreaming: boolean
+}) => {
+  // Consolidate all reasoning parts into one block
+  const reasoningParts = message.parts.filter((part) => part.type === 'reasoning')
+  const reasoningText = reasoningParts.map((part) => part.text).join('\n\n')
+  const hasReasoning = reasoningParts.length > 0
+  // Check if reasoning is still streaming (last part is reasoning on last message)
+  const lastPart = message.parts.at(-1)
+  const isReasoningStreaming = isLastMessage && isStreaming && lastPart?.type === 'reasoning'
+  return (
+    <>
+      {hasReasoning && (
+        <Reasoning className='w-full' isStreaming={isReasoningStreaming}>
+          <ReasoningTrigger />
+          <ReasoningContent>{reasoningText}</ReasoningContent>
+        </Reasoning>
+      )}
+      {message.parts.map((part, i) => {
+        if (part.type === 'text') {
+          return <MessageResponse key={`${message.id}-${i}`}>{part.text}</MessageResponse>
+        }
+        if (part.type.startsWith('tool-')) {
+          return <ToolDebugPart key={`${message.id}-${i}`} part={part} />
+        }
+        return null
+      })}
+    </>
+  )
+}
+
+const ToolDebugPart = ({ part }: { part: UIMessage['parts'][number] }) => {
+  if (!part.type.startsWith('tool-')) return null
+
+  const toolName = part.type.slice('tool-'.length)
+  const debugPart = part as Record<string, unknown>
+  const state = typeof debugPart.state === 'string' ? debugPart.state : 'unknown'
+
+  return (
+    <p>
+      Tool: {toolName} ({state})
+    </p>
   )
 }
