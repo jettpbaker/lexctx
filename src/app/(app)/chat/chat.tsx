@@ -6,6 +6,13 @@ import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import {
+  Conversation,
+  ConversationContent,
+  ConversationEmptyState,
+} from '~/components/ai-elements/conversation'
+import { Message, MessageContent, MessageResponse } from '~/components/ai-elements/message'
+import { ChatComposer } from '~/components/chatComposer'
 
 export default function Chat({
   id,
@@ -17,7 +24,7 @@ export default function Chat({
   initialQuery?: string
 }) {
   const router = useRouter()
-  const [input, setInput] = useState('')
+  const [text, setText] = useState('')
   const hasAppendedQuery = useRef(false)
 
   const { sendMessage, messages, status } = useChat({
@@ -44,74 +51,50 @@ export default function Chat({
     window.history.replaceState({}, '', `/chat/${id}`)
   }, [initialQuery, sendMessage, status, id])
 
+  function handleSubmit(text: string) {
+    if (!text) return
+    if (status === 'submitted' || status === 'streaming') return
+
+    sendMessage({ text })
+    setText('')
+  }
+
   return (
-    <div className='stretch mx-auto flex w-full max-w-md flex-col py-24'>
-      <h1 className='text-lg font-medium text-foreground/90'>Chat: {id}</h1>
-      <div className='stretch mx-auto flex w-full max-w-md flex-col py-24'>
-        {messages.map((message) => (
-          <div key={message.id} className='whitespace-pre-wrap'>
-            {message.role === 'user' ? 'User: ' : 'AI: '}
-            {message.parts.map((part, i) => {
-              switch (part.type) {
-                case 'text':
-                  return (
-                    <div
-                      key={`${message.id}-${i}`}
-                      style={{ color: '#1a8cff' }} // blue-ish for 'text'
-                    >
-                      {part.text}
-                    </div>
-                  )
-                case 'reasoning':
-                  return (
-                    <div
-                      key={`${message.id}-${i}`}
-                      style={{ color: '#878a00' }} // olive for 'reasoning'
-                    >
-                      {part.text}
-                    </div>
-                  )
-                case 'tool-weather':
-                  return (
-                    <pre
-                      key={`${message.id}-${i}`}
-                      style={{ color: '#00af54' }} // green for 'tool-weather'
-                    >
-                      {JSON.stringify(part, null, 2)}
-                    </pre>
-                  )
-                case 'tool-convertFahrenheitToCelsius':
-                  return (
-                    <pre
-                      key={`${message.id}-${i}`}
-                      style={{ color: '#cf46b2' }} // magenta for 'tool-convertFahrenheitToCelsius'
-                    >
-                      {JSON.stringify(part, null, 2)}
-                    </pre>
-                  )
-              }
-            })}
-          </div>
-        ))}
+    <div className='relative flex h-dvh min-h-0 w-full flex-1 flex-col overflow-hidden pt-[36px]'>
+      <Conversation>
+        <ConversationContent>
+          {messages.length === 0 && (
+            <ConversationEmptyState
+              title='Start a conversation'
+              description='Type a message below to begin chatting'
+            />
+          )}
+          {messages.length > 0 &&
+            messages.map(({ role, parts }, index) => (
+              <Message from={role} key={index}>
+                <MessageContent>
+                  {parts.map((part, i) => {
+                    switch (part.type) {
+                      case 'text':
+                        return <MessageResponse key={`${role}-${i}`}>{part.text}</MessageResponse>
+                      case 'tool-webSearch':
+                        if (part.state === 'input-streaming' || part.state === 'input-available') {
+                          return <span key={`${role}-${i}`}>Searching the web...</span>
+                        }
 
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault()
-            if (status === 'submitted' || status === 'streaming') return
-            const text = input.trim()
-            if (text === '') return
+                        if (part.state === 'output-available') {
+                          return <span key={`${role}-${i}`}> Searched the web</span>
+                        }
+                    }
+                  })}
+                </MessageContent>
+              </Message>
+            ))}
+        </ConversationContent>
+      </Conversation>
 
-            sendMessage({ text })
-            setInput('')
-          }}
-        >
-          <input
-            className='fixed bottom-0 mb-8 w-full max-w-md rounded border border-zinc-300 p-2 shadow-xl dark:border-zinc-800 dark:bg-zinc-900'
-            value={input}
-            placeholder='Say something...'
-            onChange={(e) => setInput(e.currentTarget.value)}
-          />
-        </form>
+      <div className='m-auto w-full max-w-(--conversation-width) px-[36px]'>
+        <ChatComposer value={text} status={status} onChange={setText} onSubmit={handleSubmit} />
       </div>
     </div>
   )
