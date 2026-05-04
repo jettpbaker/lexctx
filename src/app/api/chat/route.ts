@@ -1,4 +1,4 @@
-import { openai } from '@ai-sdk/openai'
+import { openai, OpenAILanguageModelResponsesOptions } from '@ai-sdk/openai'
 import {
   streamText,
   UIMessage,
@@ -10,6 +10,7 @@ import {
   consumeStream,
 } from 'ai'
 import { gzip, gunzip } from 'zlib'
+import z from 'zod'
 import { getChatById, upsertChat } from '~/server/actions/sources'
 
 export function gzipAsync(input: string): Promise<Buffer> {
@@ -75,6 +76,26 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: openai('gpt-5.4-nano'),
+    providerOptions: {
+      openai: {
+        reasoningEffort: 'medium',
+        // forceReasoning: true,
+        reasoningSummary: 'auto',
+      } satisfies OpenAILanguageModelResponsesOptions,
+    },
+    tools: {
+      weather: {
+        description: 'Get the weather for a given location',
+        inputSchema: z.object({
+          location: z.string(),
+        }),
+        execute: async ({ location }) => {
+          return {
+            weather: 'sunny',
+          }
+        },
+      },
+    },
     messages: await convertToModelMessages(validatedMessages),
     stopWhen: stepCountIs(5),
   })
