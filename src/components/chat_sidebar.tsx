@@ -20,9 +20,9 @@ import ChatSidebarClient from './chat_sidebar_client'
 export default function ChatSidebar() {
   return (
     <Sidebar>
-      <SidebarTrigger className='fixed top-3 left-3 z-50' />
+      <SidebarTrigger className='fixed top-2 left-2 z-50' />
 
-      <SidebarHeader className='p-3'>
+      <SidebarHeader className='p-2'>
         <div className='h-7' aria-hidden />
         <Link
           href='/'

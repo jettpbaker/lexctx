@@ -50,6 +50,7 @@ export async function listSourcesForCollection(collectionId: string) {
       name: sources.name,
       collectionId: sources.collectionId,
       collectionName: collections.name,
+      status: sources.status,
       createdAt: sources.createdAt,
       updatedAt: sources.updatedAt,
     })
@@ -66,6 +67,7 @@ export async function listAllSources() {
       name: sources.name,
       collectionId: sources.collectionId,
       collectionName: collections.name,
+      status: sources.status,
       createdAt: sources.createdAt,
       updatedAt: sources.updatedAt,
     })

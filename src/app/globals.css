@@ -11,7 +11,7 @@
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
+  --card: oklch(0.97 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
@@ -36,6 +36,7 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.5rem;
+  --conversation-width: 750px;
   --sidebar: var(--background);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -44,6 +45,8 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --scrollbar: var(--sidebar-accent);
+  --message-scrollbar: oklch(0.82 0 0);
 
   --ease-in-quad: cubic-bezier(0.55, 0.085, 0.68, 0.53);
   --ease-in-cubic: cubic-bezier(0.55, 0.055, 0.675, 0.19);
@@ -70,7 +73,7 @@
 .dark {
   --background: oklch(0.1913 0 0);
   --foreground: oklch(0.861 0.0014 286.37);
-  --card: oklch(0.209 0 0);
+  --card: oklch(0.24 0 0);
   --card-foreground: oklch(0.861 0.0014 286.37);
   --popover: oklch(0.209 0 0);
   --popover-foreground: oklch(0.861 0.0014 286.37);
@@ -97,6 +100,33 @@
   --sidebar-accent-foreground: oklch(0.861 0.0014 286.37);
   --sidebar-border: oklch(0.2768 0 0);
   --sidebar-ring: oklch(0.861 0.0014 286.37);
+  --scrollbar: var(--card);
+  --message-scrollbar: oklch(0.35 0 0);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted-foreground);
 }
 
 @theme inline {

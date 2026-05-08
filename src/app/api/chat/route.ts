@@ -48,6 +48,30 @@ async function persistChat(chatId: string, messages: UIMessage[]) {
 
 export type LexMessage = UIMessage<unknown, UIDataTypes>
 
+function getTemporalContext(timeZone: unknown) {
+  const now = new Date()
+  const resolvedTimeZone = typeof timeZone === 'string' && timeZone.length > 0 ? timeZone : 'UTC'
+
+  try {
+    const localDateTime = new Intl.DateTimeFormat('en-AU', {
+      dateStyle: 'full',
+      timeStyle: 'long',
+      timeZone: resolvedTimeZone,
+    }).format(now)
+
+    return `Current date/time: ${localDateTime}
+User timezone: ${resolvedTimeZone}
+Current UTC time: ${now.toISOString()}
+
+Use the user's timezone when interpreting relative dates like today, tomorrow, yesterday, this week, or next lecture.`
+  } catch {
+    return `Current date/time: ${now.toISOString()}
+User timezone: UTC
+
+Use UTC when interpreting relative dates like today, tomorrow, yesterday, this week, or next lecture.`
+  }
+}
+
 export async function loadChat(id: string): Promise<{ exists: boolean; messages: LexMessage[] }> {
   const [chat] = await getChatById(id)
 
@@ -64,7 +88,7 @@ export async function loadChat(id: string): Promise<{ exists: boolean; messages:
 }
 
 export async function POST(req: Request) {
-  const { message, id } = await req.json()
+  const { message, id, timeZone } = await req.json()
 
   const chat = await loadChat(id)
 
@@ -75,14 +99,15 @@ export async function POST(req: Request) {
   })
 
   const result = streamText({
-    model: openai('gpt-5.4-nano'),
+    model: openai('gpt-5.5-2026-04-23'),
     providerOptions: {
       openai: {
-        reasoningEffort: 'medium',
+        reasoningEffort: 'low',
         reasoningSummary: 'auto',
       } satisfies OpenAILanguageModelResponsesOptions,
     },
     tools: chatTools,
+    system: getTemporalContext(timeZone),
     messages: await convertToModelMessages(validatedMessages),
     stopWhen: stepCountIs(5),
   })
