@@ -3,7 +3,7 @@
 import type { LexMessage } from '~/app/api/chat/route'
 
 import { useChat } from '@ai-sdk/react'
-import { DefaultChatTransport, UIMessage } from 'ai'
+import { DefaultChatTransport, getToolName, isToolUIPart, UIMessage } from 'ai'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import {
@@ -14,7 +14,8 @@ import {
 import { Message, MessageContent, MessageResponse } from '~/components/ai-elements/message'
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '~/components/ai-elements/reasoning'
 import { Shimmer } from '~/components/ai-elements/shimmer'
-import { ChatComposer } from '~/components/chatComposer'
+import { ChatComposer } from '~/components/chat/chat_composer'
+import { ToolStatusRow } from '~/components/chat/tool_status_row'
 
 export default function Chat({
   id,
@@ -114,14 +115,21 @@ export default function Chat({
           {isWaitingForVisibleAssistantOutput && (
             <Message from='assistant'>
               <MessageContent>
-                <Shimmer>Planning next steps</Shimmer>
+                <Shimmer
+                  color='var(--color-muted-foreground)'
+                  shimmerColor='var(--color-foreground)'
+                  duration={1.25}
+                  spread={2}
+                >
+                  Planning next steps
+                </Shimmer>
               </MessageContent>
             </Message>
           )}
         </ConversationContent>
       </Conversation>
 
-      <div className='m-auto w-full max-w-(--conversation-width) px-[36px]'>
+      <div className='w-full px-[36px]'>
         <ChatComposer value={text} status={status} onChange={setText} onSubmit={handleSubmit} />
       </div>
     </div>
@@ -133,7 +141,7 @@ function hasVisibleAssistantParts(message: UIMessage) {
     if (part.type === 'text' || part.type === 'reasoning') {
       return part.text.trim().length > 0
     }
-    return part.type.startsWith('tool-')
+    return isToolUIPart(part)
   })
 }
 
@@ -146,44 +154,67 @@ const MessageParts = ({
   isLastMessage: boolean
   isStreaming: boolean
 }) => {
-  // Consolidate all reasoning parts into one block
-  const reasoningParts = message.parts.filter((part) => part.type === 'reasoning')
-  const reasoningText = reasoningParts.map((part) => part.text).join('\n\n')
-  const hasReasoning = reasoningParts.length > 0
-  // Check if reasoning is still streaming (last part is reasoning on last message)
-  const lastPart = message.parts.at(-1)
-  const isReasoningStreaming = isLastMessage && isStreaming && lastPart?.type === 'reasoning'
   return (
     <>
-      {hasReasoning && (
-        <Reasoning className='w-full' isStreaming={isReasoningStreaming}>
-          <ReasoningTrigger />
-          <ReasoningContent>{reasoningText}</ReasoningContent>
-        </Reasoning>
-      )}
       {message.parts.map((part, i) => {
+        if (part.type === 'reasoning') {
+          const prev = message.parts[i - 1]
+          if (prev?.type === 'reasoning') return null
+
+          const runTexts: string[] = []
+          let runPartCount = 0
+          for (let j = i; j < message.parts.length; j++) {
+            const next = message.parts[j]
+            if (next.type !== 'reasoning') break
+            runPartCount++
+            const text = next.text.trim()
+            if (text.length > 0) {
+              runTexts.push(text)
+            }
+          }
+
+          if (runTexts.length === 0) return null
+
+          const runEndsAtLastPart = i + runPartCount === message.parts.length
+          const isThisRunStreaming = isLastMessage && isStreaming && runEndsAtLastPart
+
+          return (
+            <Reasoning
+              key={`${message.id}-${i}`}
+              className='w-full'
+              isStreaming={isThisRunStreaming}
+            >
+              <ReasoningTrigger />
+              <ReasoningContent>{runTexts.join('\n\n')}</ReasoningContent>
+            </Reasoning>
+          )
+        }
+
+        if (isToolUIPart(part)) {
+          return <ToolPart key={`${message.id}-${i}`} part={part} />
+        }
+
         if (part.type === 'text') {
           return <MessageResponse key={`${message.id}-${i}`}>{part.text}</MessageResponse>
         }
-        if (part.type.startsWith('tool-')) {
-          return <ToolDebugPart key={`${message.id}-${i}`} part={part} />
-        }
+
         return null
       })}
     </>
   )
 }
 
-const ToolDebugPart = ({ part }: { part: UIMessage['parts'][number] }) => {
-  if (!part.type.startsWith('tool-')) return null
+const ToolPart = ({ part }: { part: UIMessage['parts'][number] }) => {
+  if (!isToolUIPart(part)) return null
 
-  const toolName = part.type.slice('tool-'.length)
-  const debugPart = part as Record<string, unknown>
-  const state = typeof debugPart.state === 'string' ? debugPart.state : 'unknown'
+  const toolName = getToolName(part)
+  const isInFlight =
+    part.state === 'input-streaming' ||
+    part.state === 'input-available' ||
+    part.state === 'approval-requested' ||
+    part.state === 'approval-responded'
 
-  return (
-    <p>
-      Tool: {toolName} ({state})
-    </p>
-  )
+  const status = part.state === 'output-error' ? 'error' : isInFlight ? 'in-flight' : 'completed'
+
+  return <ToolStatusRow toolName={toolName} status={status} />
 }

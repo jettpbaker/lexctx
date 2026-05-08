@@ -2,29 +2,30 @@
 
 import { generateId } from 'ai'
 import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
+import { ChatComposer } from '~/components/chat/chat_composer'
 
 export default function NewChatForm() {
   const router = useRouter()
+  const [message, setMessage] = useState('')
+  const [isPending, startTransition] = useTransition()
+
+  const handleSubmit = (query: string) => {
+    const chatId = generateId()
+    const params = new URLSearchParams({ query })
+    startTransition(() => {
+      router.push(`/chat/${chatId}?${params.toString()}`)
+    })
+  }
 
   return (
-    <form
-      onSubmit={async (e) => {
-        e.preventDefault()
-
-        const formData = new FormData(e.currentTarget)
-        const query = formData.get('message')
-        if (!query || typeof query !== 'string') {
-          return
-        }
-
-        const chatId = generateId()
-
-        const params = new URLSearchParams({ query })
-        router.push(`/chat/${chatId}?${params.toString()}`)
-      }}
-    >
-      <input type='text' name='message' placeholder='Enter your message' />
-      <button type='submit'>Send</button>
-    </form>
+    <ChatComposer
+      value={message}
+      status='ready'
+      isSubmitPending={isPending}
+      placeholder='Enter your message'
+      onChange={setMessage}
+      onSubmit={handleSubmit}
+    />
   )
 }

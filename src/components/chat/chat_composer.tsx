@@ -6,11 +6,13 @@ import { Add01Icon, ArrowUp02Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { Button } from '~/components/ui/button'
+import { Spinner } from '~/components/ui/spinner'
 import { cn } from '~/lib/utils'
 
 type ChatComposerProps = {
   value: string
   status: ChatStatus
+  isSubmitPending?: boolean
   placeholder?: string
   onChange: (value: string) => void
   onSubmit: (value: string) => void
@@ -19,6 +21,7 @@ type ChatComposerProps = {
 export function ChatComposer({
   value,
   status,
+  isSubmitPending = false,
   placeholder = 'Send follow up',
   onChange,
   onSubmit,
@@ -26,7 +29,7 @@ export function ChatComposer({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [isComposing, setIsComposing] = useState(false)
   const [hasMultipleInputLines, setHasMultipleInputLines] = useState(false)
-  const isBusy = status === 'submitted' || status === 'streaming'
+  const isBusy = isSubmitPending || status === 'submitted' || status === 'streaming'
   const canSubmit = value.trim().length > 0 && !isBusy
   const isEmpty = value.trim() === ''
   const multipleInputLines = !isEmpty && hasMultipleInputLines
@@ -55,11 +58,11 @@ export function ChatComposer({
   }, [canSubmit, onSubmit, value])
 
   return (
-    <div>
+    <div className='mx-auto w-full max-w-(--conversation-width)'>
       <form
         className={cn(
           'border border-border bg-card',
-          multipleInputLines ? 'rounded-[calc(var(--radius)*2)]' : 'rounded-full'
+          multipleInputLines ? 'rounded-2xl' : 'rounded-full'
         )}
         onSubmit={(event) => {
           event.preventDefault()
@@ -83,7 +86,7 @@ export function ChatComposer({
           <textarea
             className={cn(
               'block max-h-32 min-h-4 w-full resize-none overflow-y-auto border-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground',
-              multipleInputLines ? 'flex-none' : 'flex-1'
+              multipleInputLines ? 'flex-none pr-9' : 'flex-1'
             )}
             ref={textareaRef}
             onChange={(event) => onChange(event.currentTarget.value)}
@@ -103,7 +106,11 @@ export function ChatComposer({
 
           {!multipleInputLines && (
             <Button size='icon' disabled={!canSubmit} type='submit' className='rounded-full'>
-              <HugeiconsIcon icon={ArrowUp02Icon} strokeWidth={2} className='size-4.5' />
+              {isSubmitPending ? (
+                <Spinner className='size-4.5' />
+              ) : (
+                <HugeiconsIcon icon={ArrowUp02Icon} strokeWidth={2} className='size-4.5' />
+              )}
             </Button>
           )}
 
@@ -114,7 +121,11 @@ export function ChatComposer({
               </Button>
 
               <Button size='icon' disabled={!canSubmit} type='submit' className='rounded-full'>
-                <HugeiconsIcon icon={ArrowUp02Icon} strokeWidth={2} className='size-4.5' />
+                {isSubmitPending ? (
+                  <Spinner className='size-4.5' />
+                ) : (
+                  <HugeiconsIcon icon={ArrowUp02Icon} strokeWidth={2} className='size-4.5' />
+                )}
               </Button>
             </div>
           )}

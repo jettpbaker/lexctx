@@ -8,8 +8,9 @@ import { code } from '@streamdown/code'
 import { math } from '@streamdown/math'
 import { mermaid } from '@streamdown/mermaid'
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
-import { createContext, memo, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Streamdown } from 'streamdown'
+import { buildScrollFadeMask, useScrollEdges } from '~/components/ai-elements/scroll-fade'
 import { Button } from '~/components/ui/button'
 import { ButtonGroup, ButtonGroupText } from '~/components/ui/button-group'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip'
@@ -32,22 +33,38 @@ export const Message = ({ className, from, ...props }: MessageProps) => (
 
 export type MessageContentProps = HTMLAttributes<HTMLDivElement>
 
-export const MessageContent = ({ children, className, ...props }: MessageContentProps) => (
-  <div
-    className={cn(
-      'is-user:dark flex w-full min-w-0 flex-col gap-2 text-sm group-[.is-assistant]:px-2 group-[.is-user]:max-w-(--conversation-width)',
-      'border-border group-[.is-user]:rounded-lg group-[.is-user]:border group-[.is-user]:bg-card group-[.is-user]:px-2 group-[.is-user]:py-2 group-[.is-user]:text-foreground',
-      'group-[.is-assistant]:text-foreground',
-      className
-    )}
-    {...props}
-  >
-    {/* TODO: add a fade at the top/bottom of this scroll area via mask-image once the rest of the message UI is settled */}
-    <div className='group-[.is-user]:max-h-24 group-[.is-user]:overflow-y-auto group-[.is-user]:[--scrollbar:var(--message-scrollbar)]'>
-      {children}
+const MESSAGE_FADE_PX = 24
+
+export const MessageContent = ({ children, className, ...props }: MessageContentProps) => {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const { atTop, atBottom } = useScrollEdges(scrollRef)
+  const maskImage = buildScrollFadeMask({
+    atTop,
+    atBottom,
+    topPx: MESSAGE_FADE_PX,
+    bottomPx: MESSAGE_FADE_PX,
+  })
+
+  return (
+    <div
+      className={cn(
+        'is-user:dark flex w-full min-w-0 flex-col gap-2 text-sm group-[.is-assistant]:px-2 group-[.is-user]:max-w-(--conversation-width)',
+        'border-border group-[.is-user]:rounded-lg group-[.is-user]:border group-[.is-user]:bg-card group-[.is-user]:px-2 group-[.is-user]:py-2 group-[.is-user]:text-foreground',
+        'group-[.is-assistant]:text-foreground',
+        className
+      )}
+      {...props}
+    >
+      <div
+        ref={scrollRef}
+        style={{ maskImage }}
+        className='group-[.is-user]:max-h-24 group-[.is-user]:overflow-y-auto group-[.is-user]:[--scrollbar:var(--message-scrollbar)]'
+      >
+        {children}
+      </div>
     </div>
-  </div>
-)
+  )
+}
 
 export type MessageActionsProps = ComponentProps<'div'>
 

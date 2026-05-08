@@ -2,23 +2,24 @@ import z from 'zod'
 import { listAllSources, listSourcesForCollection } from '~/server/actions/sources'
 
 export const listSourcesTool = {
-  description:
-    'List sources. Call with an empty object {} to list all sources, or provide collectionId to list only sources in one collection.',
-  inputSchema: z.object({
-    collectionId: z
-      .uuid()
-      .optional()
-      .describe('Optional collection ID. Omit this field to list all sources.'),
-  }),
-  execute: async ({ collectionId }: { collectionId?: string }) => {
-    if (collectionId) {
-      const sources = await listSourcesForCollection(collectionId)
-      return {
-        sources,
-      }
-    }
-
+  description: 'List all uploaded sources across all collections. Call with an empty object {}.',
+  inputSchema: z.object({}),
+  execute: async () => {
     const sources = await listAllSources()
+    return {
+      sources,
+    }
+  },
+}
+
+export const listSourcesForCollectionTool = {
+  description:
+    'List uploaded sources in one specific collection. Only use this when you have a real collection ID.',
+  inputSchema: z.object({
+    collectionId: z.uuid().describe('The collection ID to list sources for.'),
+  }),
+  execute: async ({ collectionId }: { collectionId: string }) => {
+    const sources = await listSourcesForCollection(collectionId)
     return {
       sources,
     }

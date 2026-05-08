@@ -1,9 +1,15 @@
 import { COLLECTIONS_GALLERY, ROW_GALLERY } from '~/app/styleguide/mock_data'
+import { Reasoning, ReasoningContent, ReasoningTrigger } from '~/components/ai-elements/reasoning'
+import { ToolStatusRow } from '~/components/chat/tool_status_row'
+import { toolUiMapping } from '~/components/chat/toolUiMapping'
 import {
   CollectionGroup,
   type CollectionGroupCollection,
 } from '~/components/sources/collection_group'
 import { SourceRow } from '~/components/sources/source_row'
+
+const TOOL_NAMES = Object.keys(toolUiMapping) as Array<keyof typeof toolUiMapping>
+const TOOL_STATES = ['in-flight', 'completed', 'error'] as const
 
 export default function StyleguidePage() {
   return (
@@ -48,6 +54,28 @@ export default function StyleguidePage() {
         <SidebarFrame>
           <ComposedSidebar collections={COLLECTIONS_GALLERY} />
         </SidebarFrame>
+      </Section>
+
+      <Section
+        title='Chat tool statuses'
+        description='Every tool from toolUiMapping rendered in each lifecycle state. The reasoning trigger row is included on top so icon/text alignment can be checked across rows.'
+      >
+        <div className='grid gap-6 md:grid-cols-3'>
+          {TOOL_STATES.map((state) => (
+            <div key={state} className='flex flex-col rounded-lg border border-border p-4'>
+              <p className='mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground'>
+                {state}
+              </p>
+              <Reasoning defaultOpen>
+                <ReasoningTrigger />
+                <ReasoningContent>Mock reasoning content for alignment check.</ReasoningContent>
+              </Reasoning>
+              {TOOL_NAMES.map((toolName) => (
+                <ToolStatusRow key={toolName} toolName={toolName} status={state} />
+              ))}
+            </div>
+          ))}
+        </div>
       </Section>
     </main>
   )

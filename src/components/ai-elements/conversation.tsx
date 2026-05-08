@@ -4,22 +4,50 @@ import type { UIMessage } from 'ai'
 import type { ComponentProps } from 'react'
 
 import { ArrowDownIcon, DownloadIcon } from 'lucide-react'
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { StickToBottom, useStickToBottomContext } from 'use-stick-to-bottom'
+import { buildScrollFadeMask, useScrollEdges } from '~/components/ai-elements/scroll-fade'
 import { Button } from '~/components/ui/button'
 import { cn } from '~/lib/utils'
 
 export type ConversationProps = ComponentProps<typeof StickToBottom>
 
-export const Conversation = ({ className, ...props }: ConversationProps) => (
+const TOP_FADE_PX = 24
+const BOTTOM_FADE_PX = 32
+
+export const Conversation = ({ className, children, ...props }: ConversationProps) => (
   <StickToBottom
     className={cn('relative min-h-0 w-full flex-1 overflow-y-hidden', className)}
     initial='smooth'
     resize='smooth'
     role='log'
     {...props}
-  />
+  >
+    {(ctx) => (
+      <>
+        <ConversationFadeMask />
+        {typeof children === 'function' ? children(ctx) : children}
+      </>
+    )}
+  </StickToBottom>
 )
+
+// Lives inside <StickToBottom> so it can read the actual scroll element from
+// context. Writes the mask directly onto that element so we don't have to lift
+// scroll-edge state up into Conversation.
+function ConversationFadeMask() {
+  const { scrollRef } = useStickToBottomContext()
+  const { atTop, atBottom } = useScrollEdges(scrollRef)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    el.style.maskImage =
+      buildScrollFadeMask({ atTop, atBottom, topPx: TOP_FADE_PX, bottomPx: BOTTOM_FADE_PX }) ?? ''
+  }, [scrollRef, atTop, atBottom])
+
+  return null
+}
 
 export type ConversationContentProps = ComponentProps<typeof StickToBottom.Content>
 
