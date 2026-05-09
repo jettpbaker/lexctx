@@ -54,7 +54,7 @@ export type ConversationContentProps = ComponentProps<typeof StickToBottom.Conte
 export const ConversationContent = ({ className, ...props }: ConversationContentProps) => (
   <StickToBottom.Content
     className={cn(
-      'mx-auto flex w-full max-w-(--conversation-width) flex-col gap-4 p-4 px-[36px]',
+      'mx-auto flex w-full max-w-(--conversation-width) flex-col gap-4 p-4 px-9',
       className
     )}
     {...props}

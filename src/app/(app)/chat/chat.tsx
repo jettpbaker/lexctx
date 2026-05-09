@@ -3,6 +3,7 @@
 import type { LexMessage } from '~/app/api/chat/route'
 
 import { useChat } from '@ai-sdk/react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { DefaultChatTransport, getToolName, isToolUIPart, UIMessage } from 'ai'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
@@ -16,6 +17,8 @@ import { Reasoning, ReasoningContent, ReasoningTrigger } from '~/components/ai-e
 import { Shimmer } from '~/components/ai-elements/shimmer'
 import { ChatComposer } from '~/components/chat/chat_composer'
 import { ToolStatusRow } from '~/components/chat/tool_status_row'
+import { CHAT_USAGE_KEY } from '~/lib/query_keys'
+import { getChatUsageById } from '~/server/actions/sources'
 
 export default function Chat({
   id,
@@ -27,8 +30,23 @@ export default function Chat({
   initialQuery?: string
 }) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [text, setText] = useState('')
   const hasAppendedQuery = useRef(false)
+
+  const chatUsageQuery = useQuery({
+    queryKey: [CHAT_USAGE_KEY, id],
+    queryFn: () => getChatUsageById(id),
+    // initialData: {
+    //   totalInputTokens: 0,
+    //   totalCachedInputTokens: 0,
+    //   totalOutputTokens: 0,
+    //   totalTokens: 0,
+    //   totalCostMicroUsd: 0,
+    // },
+  })
+
+  const chatUsage = chatUsageQuery.data
 
   const { sendMessage, messages, status } = useChat({
     id,
@@ -47,6 +65,7 @@ export default function Chat({
       },
     }),
     onFinish() {
+      queryClient.invalidateQueries({ queryKey: [CHAT_USAGE_KEY, id] })
       router.refresh()
     },
   })
@@ -130,8 +149,14 @@ export default function Chat({
         </ConversationContent>
       </Conversation>
 
-      <div className='w-full px-[36px]'>
-        <ChatComposer value={text} status={status} onChange={setText} onSubmit={handleSubmit} />
+      <div className='w-full'>
+        <ChatComposer
+          value={text}
+          status={status}
+          onChange={setText}
+          onSubmit={handleSubmit}
+          usage={chatUsage}
+        />
       </div>
     </div>
   )

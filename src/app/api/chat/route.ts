@@ -8,10 +8,17 @@ import {
   UIDataTypes,
   createIdGenerator,
   consumeStream,
+  LanguageModelUsage,
 } from 'ai'
 import { gzip, gunzip } from 'zlib'
-import { getChatById, upsertChat } from '~/server/actions/sources'
+import { ChatUsage, getChatById, upsertChat } from '~/server/actions/sources'
+import { modelPriceMapping } from '~/server/ai/modelPriceMapping'
 import { chatTools } from '~/server/ai/tools'
+
+// TODO: Swap back to GPT-5.5
+// const CHAT_MODEL_ID = 'gpt-5.5-2026-04-23'
+const CHAT_MODEL_ID = 'gpt-5.4-nano'
+const CHAT_MODEL_PRICE = modelPriceMapping['GPT-5.5']
 
 export function gzipAsync(input: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -37,13 +44,13 @@ export function gunzipAsync(input: Buffer): Promise<string> {
   })
 }
 
-async function persistChat(chatId: string, messages: UIMessage[]) {
+async function persistChat(chatId: string, messages: UIMessage[], usage?: ChatUsage) {
   const messageCount = messages.filter((message) => message.role !== 'system').length
   const messagesString = JSON.stringify(messages)
   const messagesGzip = await gzipAsync(messagesString)
   const messagesGzipBase64 = messagesGzip.toString('base64')
 
-  await upsertChat(chatId, messagesGzipBase64, messageCount)
+  await upsertChat(chatId, messagesGzipBase64, messageCount, usage)
 }
 
 export type LexMessage = UIMessage<unknown, UIDataTypes>
@@ -65,6 +72,26 @@ function getTemporalContext(timeZone: unknown, locale: unknown) {
 User timezone: ${resolvedTimeZone}
 
 Use the user's timezone when interpreting relative dates like today, tomorrow, yesterday, this week, or next lecture.`
+}
+
+function calculateChatUsage(usage: LanguageModelUsage): ChatUsage {
+  const totalInputTokens = usage.inputTokens ?? 0
+  const cachedInputTokens = usage.inputTokenDetails.cacheReadTokens ?? 0
+  const uncachedInputTokens = Math.max(totalInputTokens - cachedInputTokens, 0)
+  const totalOutputTokens = usage.outputTokens ?? 0
+  const totalTokens = usage.totalTokens ?? totalInputTokens + totalOutputTokens
+
+  return {
+    totalInputTokens,
+    totalCachedInputTokens: cachedInputTokens,
+    totalOutputTokens,
+    totalTokens,
+    totalCostMicroUsd: Math.round(
+      uncachedInputTokens * CHAT_MODEL_PRICE.inputUsdPerMillionTokens +
+        cachedInputTokens * CHAT_MODEL_PRICE.cachedInputUsdPerMillionTokens +
+        totalOutputTokens * CHAT_MODEL_PRICE.outputUsdPerMillionTokens
+    ),
+  }
 }
 
 export async function loadChat(id: string): Promise<{ exists: boolean; messages: LexMessage[] }> {
@@ -94,7 +121,7 @@ export async function POST(req: Request) {
   })
 
   const result = streamText({
-    model: openai('gpt-5.5-2026-04-23'),
+    model: openai(CHAT_MODEL_ID),
     providerOptions: {
       openai: {
         reasoningEffort: 'low',
@@ -145,7 +172,8 @@ export async function POST(req: Request) {
         // For now, maybe don't persist it as final history.
         return
       }
-      await persistChat(id, messages)
+      const usage = calculateChatUsage(await result.usage)
+      await persistChat(id, messages, usage)
     },
   })
 }

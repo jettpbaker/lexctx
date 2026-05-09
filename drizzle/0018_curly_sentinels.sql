@@ -1,0 +1,1 @@
+ALTER TABLE "chats" ADD COLUMN "total_cached_input_tokens" bigint;

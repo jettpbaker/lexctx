@@ -8,12 +8,11 @@ type ChatPageProps = {
   searchParams: Promise<{ query?: string }>
 }
 
-async function loadChat(id: string): Promise<{ messages: LexMessage[] }> {
+async function loadChat(id: string): Promise<{ messages: LexMessage[] } | null> {
   const [chat] = await getChatById(id)
 
   if (!chat) {
-    // Todo: handle this
-    throw new Error(`Chat not found: ${id}`)
+    return null
   }
 
   const messagesGzip = Buffer.from(chat.messagesGzipBase64, 'base64')
@@ -31,7 +30,7 @@ export default async function ChatPage({ params, searchParams }: ChatPageProps) 
     return <Chat id={id} initialMessages={[]} initialQuery={query} />
   }
 
-  const { messages } = await loadChat(id)
+  const chat = await loadChat(id)
 
-  return <Chat id={id} initialMessages={messages} />
+  return <Chat id={id} initialMessages={chat?.messages ?? []} />
 }

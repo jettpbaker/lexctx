@@ -26,6 +26,7 @@ export default function NewChatForm() {
       placeholder='Enter your message'
       onChange={setMessage}
       onSubmit={handleSubmit}
+      displayUsage={false}
     />
   )
 }

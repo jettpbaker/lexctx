@@ -127,6 +127,13 @@
       "when": 1777883178519,
       "tag": "0017_clear_chronomancer",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1778293476335,
+      "tag": "0018_curly_sentinels",
+      "breakpoints": true
     }
   ]
 }
