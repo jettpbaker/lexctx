@@ -38,12 +38,14 @@ type SourceStore = {
   markAudioUploadCompleted: (id: string) => void
   markAudioPipelineFailed: (id: string, error: string) => void
 
-  // markVideoUploadStarted: (id: string) => void
-  // markVideoUploadCompleted: (id: string) => void
+  markVideoUploadStarted: (id: string) => void
+  markVideoUploadCompleted: (id: string) => void
+  markVideoPipelineFailed: (id: string, error: string) => void
 
   updateHashingProgress: (id: string, progress: number) => void
   updateExtractionProgress: (id: string, progress: number) => void
-  updateUploadProgress: (id: string, progress: number) => void
+  updateAudioUploadProgress: (id: string, progress: number) => void
+  updateVideoUploadProgress: (id: string, progress: number) => void
 }
 
 const addSource = (
@@ -228,21 +230,17 @@ const markAudioUploadStarted = (
 const markAudioUploadCompleted = (
   id: string,
   sources: Record<string, LocalSourceType>,
-  files: Partial<Record<string, SourceFiles>>,
-  active: ActiveType
+  active: ActiveType,
+  queue: string[]
 ): Partial<SourceStore> => {
   if (!sources[id]) return {}
 
-  const { [id]: _, ...restFiles } = files
-
   return {
-    // TODO: Update video upload queue
-    // TODO: Mark video upload as active
+    videoUploadQueue: [...queue, id],
     active: {
       ...active,
       audioUploading: null,
     },
-    files: restFiles,
     sources: {
       ...sources,
       [id]: {
@@ -290,6 +288,67 @@ const markAudioPipelineFailed = (
   }
 }
 
+const markVideoUploadStarted = (
+  id: string,
+  sources: Record<string, LocalSourceType>,
+  active: ActiveType,
+  queue: string[]
+): Partial<SourceStore> => {
+  return {
+    videoUploadQueue: queue.filter((sourceId) => sourceId !== id),
+    active: { ...active, videoUploading: id },
+    sources: {
+      ...sources,
+      [id]: {
+        ...sources[id],
+        videoStatus: { stage: 'uploading', progress: 0 },
+      },
+    },
+  }
+}
+
+const markVideoUploadCompleted = (
+  id: string,
+  sources: Record<string, LocalSourceType>,
+  active: ActiveType,
+  files: Partial<Record<string, SourceFiles>>
+): Partial<SourceStore> => {
+  const { [id]: _, ...restFiles } = files
+
+  return {
+    active: { ...active, videoUploading: null },
+    sources: {
+      ...sources,
+      [id]: {
+        ...sources[id],
+        videoStatus: { stage: 'uploaded' },
+      },
+    },
+    files: restFiles,
+  }
+}
+
+const markVideoPipelineFailed = (
+  id: string,
+  error: string,
+  sources: Record<string, LocalSourceType>,
+  files: Partial<Record<string, SourceFiles>>,
+  active: ActiveType
+): Partial<SourceStore> => {
+  const { [id]: _, ...restFiles } = files
+
+  return {
+    active: { ...active, videoUploading: null },
+    sources: {
+      ...sources,
+      [id]: {
+        ...sources[id],
+        videoStatus: { stage: 'failed', error },
+      },
+    },
+    files: restFiles,
+  }
+}
 const updateHashingProgress = (
   id: string,
   progress: number,
@@ -340,7 +399,7 @@ const updateExtractionProgress = (
   }
 }
 
-const updateUploadProgress = (
+const updateAudioUploadProgress = (
   id: string,
   progress: number,
   sources: Record<string, LocalSourceType>
@@ -358,6 +417,31 @@ const updateUploadProgress = (
         ...source,
         audioStatus: {
           ...source.audioStatus,
+          progress,
+        },
+      },
+    },
+  }
+}
+
+const updateVideoUploadProgress = (
+  id: string,
+  progress: number,
+  sources: Record<string, LocalSourceType>
+): Partial<SourceStore> => {
+  const source = sources[id]
+
+  if (!source || source.videoStatus.stage !== 'uploading') {
+    return {}
+  }
+
+  return {
+    sources: {
+      ...sources,
+      [id]: {
+        ...source,
+        videoStatus: {
+          ...source.videoStatus,
           progress,
         },
       },
@@ -421,7 +505,9 @@ export const useSourceStore = create<SourceStore>()((set) => ({
   markAudioUploadStarted: (id) =>
     set((state) => markAudioUploadStarted(id, state.sources, state.active, state.audioUploadQueue)),
   markAudioUploadCompleted: (id) =>
-    set((state) => markAudioUploadCompleted(id, state.sources, state.files, state.active)),
+    set((state) =>
+      markAudioUploadCompleted(id, state.sources, state.active, state.videoUploadQueue)
+    ),
   markAudioPipelineFailed: (id, error) =>
     set((state) =>
       markAudioPipelineFailed(
@@ -436,8 +522,17 @@ export const useSourceStore = create<SourceStore>()((set) => ({
       )
     ),
 
+  markVideoUploadStarted: (id) =>
+    set((state) => markVideoUploadStarted(id, state.sources, state.active, state.videoUploadQueue)),
+  markVideoUploadCompleted: (id) =>
+    set((state) => markVideoUploadCompleted(id, state.sources, state.active, state.files)),
+  markVideoPipelineFailed: (id, error) =>
+    set((state) => markVideoPipelineFailed(id, error, state.sources, state.files, state.active)),
+
   updateExtractionProgress: (id, progress) =>
     set((state) => updateExtractionProgress(id, progress, state.sources)),
-  updateUploadProgress: (id, progress) =>
-    set((state) => updateUploadProgress(id, progress, state.sources)),
+  updateAudioUploadProgress: (id, progress) =>
+    set((state) => updateAudioUploadProgress(id, progress, state.sources)),
+  updateVideoUploadProgress: (id, progress) =>
+    set((state) => updateVideoUploadProgress(id, progress, state.sources)),
 }))

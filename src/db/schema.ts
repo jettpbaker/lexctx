@@ -20,7 +20,13 @@ export const sourceStatusEnum = p.pgEnum('source_status', [
   'failed',
 ])
 
-export const videoStatusEnum = p.pgEnum('video_status', ['processing', 'ready', 'failed'])
+export const videoStatusEnum = p.pgEnum('video_status', [
+  'pending_upload',
+  'uploading',
+  'processing',
+  'ready',
+  'failed',
+])
 
 export const sources = p.pgTable(
   'sources',
@@ -35,9 +41,11 @@ export const sources = p.pgTable(
     contentHashType: p.text('content_hash_type'),
     fileSize: p.bigint('file_size', { mode: 'number' }),
     status: sourceStatusEnum('status').notNull().default('pending_upload'),
-    videoStatus: videoStatusEnum('video_status').notNull().default('processing'),
+    videoStatus: videoStatusEnum('video_status').notNull().default('pending_upload'),
     audioUrl: p.text('audio_url'),
     audioKey: p.text('audio_key'),
+    muxUploadId: p.text('mux_upload_id'),
+    muxAssetId: p.text('mux_asset_id'),
     muxPlaybackId: p.text('mux_playback_id'),
     falRequestId: p.text('fal_request_id'),
     transcriptText: p.text('transcript_text'),

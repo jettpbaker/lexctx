@@ -22,13 +22,37 @@ export type SourceUiStatus =
   | { kind: 'ready' }
   | { kind: 'failed'; failedDuring: 'upload' | 'process'; error: string }
 
+/**
+ * Secondary status for video upload/processing.
+ *
+ * Decoupled from `SourceUiStatus` because chat readiness (audio → transcript →
+ * embeddings) does not depend on video. The row's primary label tracks chat
+ * readiness; this drives a smaller, demoted chip so users can see "chat is
+ * usable, video is still uploading/processing" at a glance.
+ *
+ * `pending` and `ready` render nothing — quiet by design when there's nothing
+ * to communicate.
+ */
+export type VideoUiStatus =
+  | { kind: 'pending' }
+  | { kind: 'uploading'; progress: number }
+  | { kind: 'processing' }
+  | { kind: 'ready' }
+  | { kind: 'failed'; error: string }
+
 export type LocalStageKind = 'hashing' | 'extracting' | 'uploading'
 export type RemoteStageKind = 'transcribing' | 'indexing'
 
 type DbSourceStatus = 'pending_upload' | 'transcribing' | 'indexing' | 'ready' | 'failed'
+type DbVideoStatus = 'pending_upload' | 'uploading' | 'processing' | 'ready' | 'failed'
 
 type DbSourceStatusLike = {
   status: DbSourceStatus
+  error: string | null
+}
+
+type DbVideoStatusLike = {
+  videoStatus: DbVideoStatus
   error: string | null
 }
 
@@ -111,6 +135,70 @@ export function localAudioStatusToSourceUiStatus(source: LocalSourceType): Sourc
 
 export function shouldUseLocalSourceStatus(source: LocalSourceType): boolean {
   return source.audioStatus.stage !== 'uploaded'
+}
+
+export function dbVideoStatusToVideoUiStatus(source: DbVideoStatusLike): VideoUiStatus {
+  switch (source.videoStatus) {
+    case 'pending_upload':
+      return { kind: 'pending' }
+    case 'uploading':
+      // Server knows we're uploading but doesn't track progress; the local
+      // store has the real number when relevant (see `mergeVideoStatus`).
+      return { kind: 'uploading', progress: 0 }
+    case 'processing':
+      return { kind: 'processing' }
+    case 'ready':
+      return { kind: 'ready' }
+    case 'failed':
+      return { kind: 'failed', error: source.error ?? 'Video processing failed' }
+  }
+}
+
+export function localVideoStatusToVideoUiStatus(source: LocalSourceType): VideoUiStatus {
+  switch (source.videoStatus.stage) {
+    case 'pending':
+      return { kind: 'pending' }
+    case 'uploading':
+      return { kind: 'uploading', progress: source.videoStatus.progress / 100 }
+    case 'uploaded':
+      // Local upload finished; server flips DB to `processing` shortly after.
+      return { kind: 'processing' }
+    case 'failed':
+      return { kind: 'failed', error: source.videoStatus.error }
+  }
+}
+
+/**
+ * Combine DB and local video state into a single UI chip status.
+ *
+ * Local takes priority while it's authoritative (active upload or local
+ * failure) and bridges the brief window where the local upload has finished
+ * but the server hasn't yet been told to start monitoring Mux.
+ */
+export function mergeVideoStatus(
+  source: DbVideoStatusLike,
+  local: LocalSourceType | undefined
+): VideoUiStatus {
+  if (local?.videoStatus.stage === 'uploading') {
+    return { kind: 'uploading', progress: local.videoStatus.progress / 100 }
+  }
+  if (local?.videoStatus.stage === 'failed') {
+    return { kind: 'failed', error: local.videoStatus.error }
+  }
+
+  const localFinished = local?.videoStatus.stage === 'uploaded'
+  if (
+    localFinished &&
+    (source.videoStatus === 'pending_upload' || source.videoStatus === 'uploading')
+  ) {
+    return { kind: 'processing' }
+  }
+
+  return dbVideoStatusToVideoUiStatus(source)
+}
+
+export function isVideoChipVisible(status: VideoUiStatus): boolean {
+  return status.kind !== 'pending' && status.kind !== 'ready'
 }
 
 export function isInFlight(status: SourceUiStatus): boolean {

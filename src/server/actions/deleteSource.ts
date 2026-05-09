@@ -3,6 +3,7 @@
 import { deleteLectureChunks } from '~/db/chroma'
 
 import deleteSourceAudio from './deleteSourceAudio'
+import { cancelMuxUpload, deleteSourceVideo } from './deleteVideo'
 import { deleteSourceById, getSourceById } from './sources'
 
 export async function deleteSource(sourceId: string) {
@@ -12,6 +13,9 @@ export async function deleteSource(sourceId: string) {
   await Promise.all([
     deleteLectureChunks(sourceId),
     source.audioKey ? deleteSourceAudio(sourceId, source.audioKey) : Promise.resolve(),
+    source.muxAssetId
+      ? deleteSourceVideo(sourceId, source.muxAssetId)
+      : cancelMuxUpload(sourceId, source.muxUploadId),
   ])
 
   await deleteSourceById(sourceId)

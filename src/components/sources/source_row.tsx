@@ -7,6 +7,7 @@ import { Delete02Icon, Edit03Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useEffect, useRef, useState } from 'react'
 import { Shimmer } from '~/components/ai-elements/shimmer'
+import { VideoStatusChip } from '~/components/sources/video_status_chip'
 import { Button } from '~/components/ui/button'
 import {
   Popover,
@@ -20,8 +21,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip
 import {
   isLocalStage,
   isRemoteStage,
+  isVideoChipVisible,
   labelForStatus,
   type SourceUiStatus,
+  type VideoUiStatus,
 } from '~/lib/source_status'
 import { cn } from '~/lib/utils'
 
@@ -31,6 +34,7 @@ export type SourceRowSource = {
   fileSize: number | null
   createdAt: Date
   status: SourceUiStatus
+  videoStatus: VideoUiStatus
 }
 
 export type SourceRowAction = (source: SourceRowSource) => void
@@ -52,8 +56,15 @@ export function SourceRow({ source, onEdit, onDelete }: SourceRowProps) {
 
   const previousStatus = useRef(source.status.kind)
 
-  const { status } = source
+  const { status, videoStatus } = source
   const failed = status.kind === 'failed'
+
+  // When chat is ready but the video chip is still showing (uploading /
+  // processing / failed), surface "ready" explicitly in the StatusLabel slot.
+  // Otherwise the row is ambiguous — the chip alone reads as "this source is
+  // still working" even though chat is already usable. Right-aligned so the
+  // word stacks into a tidy column across rows.
+  const showReadyPrimaryLabel = status.kind === 'ready' && isVideoChipVisible(videoStatus)
 
   useEffect(() => {
     if (status.kind === 'ready' && previousStatus.current !== 'ready') setShowSuccessSweep(true)
@@ -151,8 +162,9 @@ export function SourceRow({ source, onEdit, onDelete }: SourceRowProps) {
             />
 
             <div className='grid shrink-0 items-center'>
-              <div className='col-start-1 row-start-1 flex items-center justify-end transition-opacity duration-150 ease-out group-focus-within/row:opacity-0 group-hover/row:opacity-0 motion-reduce:transition-none'>
-                <StatusLabel status={status} />
+              <div className='col-start-1 row-start-1 flex items-center justify-end gap-2 transition-opacity duration-150 ease-out group-focus-within/row:opacity-0 group-hover/row:opacity-0 motion-reduce:transition-none'>
+                <VideoStatusChip status={videoStatus} />
+                {showReadyPrimaryLabel ? <ReadyPrimaryLabel /> : <StatusLabel status={status} />}
               </div>
               <div className='pointer-events-none col-start-1 row-start-1 flex translate-x-1 items-center justify-end opacity-0 transition-all duration-150 ease-out group-focus-within/row:pointer-events-auto group-focus-within/row:translate-x-0 group-focus-within/row:opacity-100 group-hover/row:pointer-events-auto group-hover/row:translate-x-0 group-hover/row:opacity-100 motion-reduce:translate-x-0 motion-reduce:transition-none'>
                 <Popover open={deleteOpen} onOpenChange={setDeleteOpen}>
@@ -273,6 +285,14 @@ function StatusLabel({ status }: { status: SourceUiStatus }) {
   return (
     <span className={cn(baseClasses, status.kind === 'queued' && 'text-muted-foreground')}>
       {labelForStatus(status)}
+    </span>
+  )
+}
+
+function ReadyPrimaryLabel() {
+  return (
+    <span className='shrink-0 font-mono text-[10px] tracking-wide text-muted-foreground uppercase'>
+      ready
     </span>
   )
 }
