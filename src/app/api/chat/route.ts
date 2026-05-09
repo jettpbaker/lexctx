@@ -48,28 +48,23 @@ async function persistChat(chatId: string, messages: UIMessage[]) {
 
 export type LexMessage = UIMessage<unknown, UIDataTypes>
 
-function getTemporalContext(timeZone: unknown) {
+function getTemporalContext(timeZone: unknown, locale: unknown) {
   const now = new Date()
   const resolvedTimeZone = typeof timeZone === 'string' && timeZone.length > 0 ? timeZone : 'UTC'
+  const resolvedLocale = typeof locale === 'string' && locale.length > 0 ? locale : 'en-AU'
 
-  try {
-    const localDateTime = new Intl.DateTimeFormat('en-AU', {
-      dateStyle: 'full',
-      timeStyle: 'long',
-      timeZone: resolvedTimeZone,
-    }).format(now)
+  const localDate = new Intl.DateTimeFormat(resolvedLocale, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: resolvedTimeZone,
+  }).format(now)
 
-    return `Current date/time: ${localDateTime}
+  return `Current date: ${localDate}
 User timezone: ${resolvedTimeZone}
-Current UTC time: ${now.toISOString()}
 
 Use the user's timezone when interpreting relative dates like today, tomorrow, yesterday, this week, or next lecture.`
-  } catch {
-    return `Current date/time: ${now.toISOString()}
-User timezone: UTC
-
-Use UTC when interpreting relative dates like today, tomorrow, yesterday, this week, or next lecture.`
-  }
 }
 
 export async function loadChat(id: string): Promise<{ exists: boolean; messages: LexMessage[] }> {
@@ -88,7 +83,7 @@ export async function loadChat(id: string): Promise<{ exists: boolean; messages:
 }
 
 export async function POST(req: Request) {
-  const { message, id, timeZone } = await req.json()
+  const { message, id, locale, timeZone } = await req.json()
 
   const chat = await loadChat(id)
 
@@ -104,13 +99,38 @@ export async function POST(req: Request) {
       openai: {
         reasoningEffort: 'low',
         reasoningSummary: 'auto',
+        promptCacheKey: id,
       } satisfies OpenAILanguageModelResponsesOptions,
     },
     tools: chatTools,
-    system: getTemporalContext(timeZone),
+    system: getTemporalContext(timeZone, locale),
     messages: await convertToModelMessages(validatedMessages),
     stopWhen: stepCountIs(5),
   })
+
+  void (async () => {
+    try {
+      const usage = await result.usage
+      const inputTokens = usage.inputTokens ?? 0
+      const cacheReadTokens = usage.inputTokenDetails.cacheReadTokens ?? 0
+      const cacheWriteTokens = usage.inputTokenDetails.cacheWriteTokens ?? 0
+      const cacheReadRatio = inputTokens > 0 ? cacheReadTokens / inputTokens : 0
+
+      console.info('[chat usage]', {
+        chatId: id,
+        messageCount: messages.length,
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        totalTokens: usage.totalTokens,
+        cacheReadTokens,
+        cacheWriteTokens,
+        cacheReadRatio: Number(cacheReadRatio.toFixed(4)),
+        raw: usage.raw,
+      })
+    } catch (error) {
+      console.error('[chat usage] failed to read usage', error)
+    }
+  })()
 
   return result.toUIMessageStreamResponse({
     originalMessages: messages,

@@ -40,6 +40,7 @@ export default function Chat({
           body: {
             id,
             message: messages.at(-1),
+            locale: navigator.languages.at(0) ?? navigator.language,
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           },
         }
