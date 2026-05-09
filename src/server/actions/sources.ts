@@ -1,6 +1,6 @@
 'use server'
 
-import { asc, desc, eq, and, gte, lte } from 'drizzle-orm'
+import { asc, desc, eq, and, gte, lte, sql } from 'drizzle-orm'
 import { unstable_noStore as noStore } from 'next/cache'
 import db from '~/db'
 import { chats, collections, ragChunks, sources, transcriptSegments } from '~/db/schema'
@@ -257,13 +257,43 @@ export async function getAllChats(): Promise<ChatType[]> {
     .orderBy(desc(chats.createdAt), asc(chats.id))
 }
 
-export async function upsertChat(chatId: string, messagesGzipBase64: string, messageCount: number) {
+export type ChatUsage = {
+  totalInputTokens: number
+  totalCachedInputTokens: number
+  totalOutputTokens: number
+  totalTokens: number
+  totalCostMicroUsd: number
+}
+
+export async function upsertChat(
+  chatId: string,
+  messagesGzipBase64: string,
+  messageCount: number,
+  usage?: ChatUsage
+) {
+  const values = {
+    id: chatId,
+    messagesGzipBase64,
+    messageCount,
+    ...usage,
+  }
+
   await db
     .insert(chats)
-    .values({ id: chatId, messagesGzipBase64, messageCount })
+    .values(values)
     .onConflictDoUpdate({
       target: chats.id,
-      set: { messagesGzipBase64, messageCount },
+      set: {
+        messagesGzipBase64,
+        messageCount,
+        ...(usage && {
+          totalInputTokens: usage.totalInputTokens,
+          totalCachedInputTokens: usage.totalCachedInputTokens,
+          totalOutputTokens: usage.totalOutputTokens,
+          totalTokens: usage.totalTokens,
+          totalCostMicroUsd: sql`coalesce(${chats.totalCostMicroUsd}, 0) + ${usage.totalCostMicroUsd}`,
+        }),
+      },
     })
 }
 
@@ -320,3 +350,27 @@ export async function getNearbyRagChunks(
     .innerJoin(collections, eq(sources.collectionId, collections.id))
     .orderBy(asc(ragChunks.chunkIndex))
 }
+
+export async function getChatUsageById(chatId: string) {
+  noStore()
+
+  const [chat] = await db
+    .select({
+      totalInputTokens: chats.totalInputTokens,
+      totalCachedInputTokens: chats.totalCachedInputTokens,
+      totalOutputTokens: chats.totalOutputTokens,
+      totalTokens: chats.totalTokens,
+      totalCostMicroUsd: chats.totalCostMicroUsd,
+    })
+    .from(chats)
+    .where(eq(chats.id, chatId))
+    .limit(1)
+
+  if (!chat) {
+    return null
+  }
+
+  return chat
+}
+
+export type ChatUsageSummary = Awaited<ReturnType<typeof getChatUsageById>>

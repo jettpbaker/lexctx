@@ -112,6 +112,7 @@ export const chats = p.pgTable('chats', {
   messagesGzipBase64: p.text('messages_gzip_base64').notNull(),
   messageCount: p.integer('message_count').notNull().default(1),
   totalInputTokens: p.bigint('total_input_tokens', { mode: 'number' }),
+  totalCachedInputTokens: p.bigint('total_cached_input_tokens', { mode: 'number' }),
   totalOutputTokens: p.bigint('total_output_tokens', { mode: 'number' }),
   totalTokens: p.bigint('total_tokens', { mode: 'number' }),
   totalCostMicroUsd: p.bigint('total_cost_micro_usd', { mode: 'number' }),

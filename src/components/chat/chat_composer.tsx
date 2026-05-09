@@ -1,18 +1,24 @@
 'use client'
 
 import type { ChatStatus } from 'ai'
+import type { ChatUsageSummary } from '~/server/actions/sources'
 
 import { Add01Icon, ArrowUp02Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { Button } from '~/components/ui/button'
 import { Spinner } from '~/components/ui/spinner'
+import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip'
 import { cn } from '~/lib/utils'
+
+import { Context, ContextTrigger } from '../ai-elements/context'
 
 type ChatComposerProps = {
   value: string
   status: ChatStatus
   isSubmitPending?: boolean
+  usage?: ChatUsageSummary
+  displayUsage?: boolean
   placeholder?: string
   onChange: (value: string) => void
   onSubmit: (value: string) => void
@@ -23,6 +29,8 @@ export function ChatComposer({
   status,
   isSubmitPending = false,
   placeholder = 'Send follow up',
+  usage,
+  displayUsage = true,
   onChange,
   onSubmit,
 }: ChatComposerProps) {
@@ -57,8 +65,16 @@ export function ChatComposer({
     onSubmit(value.trim())
   }, [canSubmit, onSubmit, value])
 
+  const maxContextTokens = 272_000
+  const usedContextPercent = new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: 0,
+    style: 'percent',
+  }).format((usage?.totalTokens ?? 0) / maxContextTokens)
+  const price = ((usage?.totalCostMicroUsd ?? 0) / 1_000_000).toFixed(2).padStart(5, '0')
+  const [d1, d2, , d3, d4] = price
+
   return (
-    <div className='mx-auto w-full max-w-(--conversation-width)'>
+    <div className='mx-auto w-full max-w-(--conversation-width) px-9'>
       <form
         className={cn(
           'border border-border bg-card',
@@ -132,15 +148,48 @@ export function ChatComposer({
         </div>
       </form>
 
-      <div className='flex items-center justify-between px-1 py-2 text-xs text-muted-foreground'>
-        {/* <div className='flex items-center gap-3'>
-          <span>Local</span>
-          <span>ui/ai</span>
-        </div>
-        <div className='flex items-center gap-3'>
-          <span>29.5% context</span>
-        </div> */}
+      <div className='flex min-h-[35px] items-center justify-between px-2 py-2 text-xs text-muted-foreground'>
+        {displayUsage && (
+          <div className='flex w-full animate-[usage-enter_260ms_var(--ease-out-cubic)_both] items-center justify-between motion-reduce:animate-none'>
+            <div className='flex cursor-default items-center gap-0.5'>
+              <span>$</span>
+              <div className='flex h-[1rem] overflow-hidden font-mono leading-[1rem]'>
+                <DigitScroller value={Number(d1)} />
+                <DigitScroller value={Number(d2)} />
+                <span>.</span>
+                <DigitScroller value={Number(d3)} />
+                <DigitScroller value={Number(d4)} />
+              </div>
+            </div>
+            <div>
+              <Context maxTokens={maxContextTokens} usedTokens={usage?.totalTokens ?? 0}>
+                <Tooltip>
+                  <TooltipTrigger render={<ContextTrigger />} />
+                  <TooltipContent>{usedContextPercent} context used</TooltipContent>
+                </Tooltip>
+              </Context>
+            </div>
+          </div>
+        )}
       </div>
+    </div>
+  )
+}
+
+function DigitScroller({ value }: { value: number }) {
+  return (
+    <div
+      className='flex flex-col transition-transform duration-500 motion-reduce:transition-none'
+      style={{
+        transform: `translateY(calc(${value} * -1rem))`,
+        transitionTimingFunction: 'var(--ease-out-cubic)',
+      }}
+    >
+      {Array.from({ length: 10 }, (_, i) => (
+        <span className='h-[1rem] leading-[1rem]' key={i}>
+          {i}
+        </span>
+      ))}
     </div>
   )
 }
