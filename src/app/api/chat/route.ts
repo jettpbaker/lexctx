@@ -16,9 +16,7 @@ import { ChatUsage, getChatById, upsertChat } from '~/server/actions/sources'
 import { modelPriceMapping } from '~/server/ai/modelPriceMapping'
 import { chatTools } from '~/server/ai/tools'
 
-// TODO: Swap back to GPT-5.5
 const CHAT_MODEL_ID = 'openai/gpt-5.5-2026-04-23'
-// const CHAT_MODEL_ID = 'openai/gpt-5.4-mini'
 const CHAT_MODEL_PRICE = modelPriceMapping['GPT-5.5']
 
 export function gzipAsync(input: string): Promise<Buffer> {
