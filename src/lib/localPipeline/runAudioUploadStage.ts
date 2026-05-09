@@ -8,7 +8,7 @@ import { COLLECTIONS_WITH_SOURCES_KEY } from '~/lib/query_keys'
 const { uploadFiles } = genUploader<FileRouter>()
 
 export default async function runAudioUploadStage(id: string, onDone: () => void) {
-  const updateUploadProgress = useSourceStore.getState().updateUploadProgress
+  const updateAudioUploadProgress = useSourceStore.getState().updateAudioUploadProgress
   const markAudioUploadStarted = useSourceStore.getState().markAudioUploadStarted
   const markAudioUploadCompleted = useSourceStore.getState().markAudioUploadCompleted
   const markAudioPipelineFailed = useSourceStore.getState().markAudioPipelineFailed
@@ -28,7 +28,7 @@ export default async function runAudioUploadStage(id: string, onDone: () => void
     await uploadFiles('audioUploader', {
       files: [audio],
       input: { sourceId: id },
-      onUploadProgress: ({ progress }) => updateUploadProgress(id, progress),
+      onUploadProgress: ({ progress }) => updateAudioUploadProgress(id, progress),
     })
 
     await getQueryClient().invalidateQueries({ queryKey: [COLLECTIONS_WITH_SOURCES_KEY] })

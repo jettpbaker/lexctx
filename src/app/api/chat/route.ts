@@ -1,4 +1,5 @@
-import { openai, OpenAILanguageModelResponsesOptions } from '@ai-sdk/openai'
+import type { OpenAILanguageModelResponsesOptions } from '@ai-sdk/openai'
+
 import {
   streamText,
   UIMessage,
@@ -16,8 +17,8 @@ import { modelPriceMapping } from '~/server/ai/modelPriceMapping'
 import { chatTools } from '~/server/ai/tools'
 
 // TODO: Swap back to GPT-5.5
-// const CHAT_MODEL_ID = 'gpt-5.5-2026-04-23'
-const CHAT_MODEL_ID = 'gpt-5.4-nano'
+const CHAT_MODEL_ID = 'openai/gpt-5.5-2026-04-23'
+// const CHAT_MODEL_ID = 'openai/gpt-5.4-mini'
 const CHAT_MODEL_PRICE = modelPriceMapping['GPT-5.5']
 
 export function gzipAsync(input: string): Promise<Buffer> {
@@ -55,7 +56,7 @@ async function persistChat(chatId: string, messages: UIMessage[], usage?: ChatUs
 
 export type LexMessage = UIMessage<unknown, UIDataTypes>
 
-function getTemporalContext(timeZone: unknown, locale: unknown) {
+function getSystemPrompt(timeZone: unknown, locale: unknown) {
   const now = new Date()
   const resolvedTimeZone = typeof timeZone === 'string' && timeZone.length > 0 ? timeZone : 'UTC'
   const resolvedLocale = typeof locale === 'string' && locale.length > 0 ? locale : 'en-AU'
@@ -68,10 +69,20 @@ function getTemporalContext(timeZone: unknown, locale: unknown) {
     timeZone: resolvedTimeZone,
   }).format(now)
 
-  return `Current date: ${localDate}
+  return `You are the assistant inside lexctx, an app where the user uploads sources — lectures, talks, recordings, documents, etc. — and organizes them into collections. You can search across their sources with the sourceSearch tool, list their collections and sources, and look things up on the web.
+
+When a question might depend on what's in the user's uploaded sources, sourceSearch is usually the right way to answer it. For general questions that don't rely on their content, answer directly.
+
+Use webSearch proactively when fresh or external information would genuinely help — recent context, references their sources wouldn't cover, things worth verifying. It's best as a complement to the user's sources rather than a replacement, and there's no need to search for the sake of searching.
+
+Write to be read quickly. Favor short paragraphs and clear markdown headings over long bulleted lists — a list is often a symptom of details that could be consolidated into a sentence or two. Aim for information density, not word count.
+
+Current date: ${localDate}
 User timezone: ${resolvedTimeZone}
 
-Use the user's timezone when interpreting relative dates like today, tomorrow, yesterday, this week, or next lecture.`
+Use the user's timezone when interpreting relative dates like today, tomorrow, yesterday, this week, or next lecture.
+
+When citing a result returned by the sourceSearch tool, cite it in the same response with an explicit markdown link using that result's actual citationId. For example, if the citationId is S1, write [S1](#citation-S1). Attach a citation **only** when that chunk directly answers the user's question—you may summarize, aggregate, or reason from search results that are only indirectly relevant, without citing those parts. Place each citation immediately after the sentence or claim it supports (or after a quoted span if you use one)—not batched together at the end of a paragraph. You do not need to phrase supported information as a literal quotation. Do not write bare citation IDs like S1; they will not render as citations. Never cite the same chunk twice in one assistant message, and never repeat the same citationId link anywhere in that message. Citing different chunks from the same underlying source is fine. Citation IDs are scoped to the current sourceSearch results, so call sourceSearch again before citing sources in a later response.`
 }
 
 function calculateChatUsage(usage: LanguageModelUsage): ChatUsage {
@@ -121,16 +132,17 @@ export async function POST(req: Request) {
   })
 
   const result = streamText({
-    model: openai(CHAT_MODEL_ID),
+    model: CHAT_MODEL_ID,
     providerOptions: {
       openai: {
         reasoningEffort: 'low',
         reasoningSummary: 'auto',
         promptCacheKey: id,
+        textVerbosity: 'low',
       } satisfies OpenAILanguageModelResponsesOptions,
     },
     tools: chatTools,
-    system: getTemporalContext(timeZone, locale),
+    system: getSystemPrompt(timeZone, locale),
     messages: await convertToModelMessages(validatedMessages),
     stopWhen: stepCountIs(5),
   })

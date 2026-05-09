@@ -4,6 +4,9 @@ import type { LexMessage } from '~/app/api/chat/route'
 import type { LectureChunkSearchResult } from '~/server/actions/searchSources'
 
 import { useChat } from '@ai-sdk/react'
+import { PlayIcon } from '@hugeicons/core-free-icons'
+import { HugeiconsIcon } from '@hugeicons/react'
+import MuxPlayer from '@mux/mux-player-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { DefaultChatTransport, getToolName, isToolUIPart, UIMessage } from 'ai'
 import { useRouter } from 'next/navigation'
@@ -18,6 +21,8 @@ import { Reasoning, ReasoningContent, ReasoningTrigger } from '~/components/ai-e
 import { Shimmer } from '~/components/ai-elements/shimmer'
 import { ChatComposer } from '~/components/chat/chat_composer'
 import { ToolStatusRow } from '~/components/chat/tool_status_row'
+import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
+import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip'
 import { CHAT_USAGE_KEY } from '~/lib/query_keys'
 import { getChatUsageById } from '~/server/actions/sources'
 
@@ -174,6 +179,8 @@ const MessageParts = ({
   isLastMessage: boolean
   isStreaming: boolean
 }) => {
+  const [selectedCitation, setSelectedCitation] = useState<LectureChunkSearchResult | null>(null)
+
   function getCitationSources(message: UIMessage) {
     const sources = new Map<string, LectureChunkSearchResult>()
 
@@ -195,6 +202,8 @@ const MessageParts = ({
   }
 
   const citationSources = getCitationSources(message)
+
+  const selectedPlaybackId = selectedCitation?.metadata.muxPlaybackId
 
   return (
     <>
@@ -244,16 +253,20 @@ const MessageParts = ({
                 a: ({ href, children }) => {
                   if (href?.startsWith('#citation-')) {
                     const citationId = href.replace('#citation-', '')
-                    const source = citationSources.get(citationId)
-                    const startTime = source?.metadata.startSeconds
-                    const sourceName = source?.metadata.sourceName
+                    const citation = citationSources.get(citationId)
+
+                    if (!citation) {
+                      return <span>{children}</span>
+                    }
 
                     return (
-                      <span key={`${citationId}-${i}`}>
-                        {sourceName} at {startTime}
-                      </span>
+                      <>
+                        {' '}
+                        <CitationChip citation={citation} onOpen={setSelectedCitation} />
+                      </>
                     )
                   }
+
                   return <a href={href}>{children}</a>
                 },
               }}
@@ -265,6 +278,41 @@ const MessageParts = ({
 
         return null
       })}
+
+      <Dialog
+        open={selectedCitation !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedCitation(null)
+          }
+        }}
+      >
+        <DialogContent
+          className='max-w-[90vw] border-none bg-transparent p-0 shadow-none sm:max-w-[90vw]'
+          showCloseButton={false}
+        >
+          <DialogTitle className='sr-only'>
+            {selectedCitation?.metadata.sourceName ?? 'Lecture video'}
+          </DialogTitle>
+
+          {selectedPlaybackId && (
+            <MuxPlayer
+              autoPlay
+              preload='auto'
+              volume={0.4}
+              accentColor='var(--color-success)'
+              primaryColor='oklch(0.985 0 0)'
+              secondaryColor='oklch(0 0 0 / 0.5)'
+              title={selectedCitation?.metadata.sourceName}
+              className='lex-mux-player aspect-video w-[90vw] overflow-hidden rounded-lg'
+              playbackId={selectedPlaybackId}
+              startTime={selectedCitation?.metadata.startSeconds}
+              thumbnailTime={selectedCitation?.metadata.startSeconds}
+              streamType='on-demand'
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
@@ -282,4 +330,73 @@ const ToolPart = ({ part }: { part: UIMessage['parts'][number] }) => {
   const status = part.state === 'output-error' ? 'error' : isInFlight ? 'in-flight' : 'completed'
 
   return <ToolStatusRow toolName={toolName} status={status} />
+}
+
+function formatTimestamp(seconds: number) {
+  const total = Math.max(0, Math.floor(seconds))
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const s = total % 60
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  }
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+function citationNotReadyTooltip(status: LectureChunkSearchResult['metadata']['videoStatus']) {
+  switch (status) {
+    case 'failed':
+      return 'Video could not be processed'
+    case 'uploading':
+    case 'pending_upload':
+      return 'Video still uploading'
+    case 'processing':
+      return 'Video still processing'
+    default:
+      return 'Video not ready yet'
+  }
+}
+
+function CitationChip({
+  citation,
+  onOpen,
+}: {
+  citation: LectureChunkSearchResult
+  onOpen: (citation: LectureChunkSearchResult) => void
+}) {
+  const startTime = citation.metadata.startSeconds ?? 0
+  const hasPlayableVideo =
+    citation.metadata.videoStatus === 'ready' && Boolean(citation.metadata.muxPlaybackId)
+
+  const chipButton = (
+    <button
+      type='button'
+      disabled={!hasPlayableVideo}
+      title={
+        hasPlayableVideo
+          ? `Open ${citation.metadata.sourceName} at ${formatTimestamp(startTime)}`
+          : undefined
+      }
+      onClick={() => onOpen(citation)}
+      className='inline-flex h-[1lh] max-w-[15ch] cursor-pointer items-center gap-1 rounded-sm bg-citation/15 px-1.5 align-middle leading-[inherit] text-citation transition-colors [text-box-edge:cap_alphabetic] [text-box-trim:trim-both] hover:bg-citation/25 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:hover:bg-muted'
+    >
+      <HugeiconsIcon icon={PlayIcon} strokeWidth={2.25} className='size-[1em] shrink-0' />
+      <span className='min-w-0 overflow-hidden [mask-image:linear-gradient(to_right,black_calc(100%-1em),transparent)] whitespace-nowrap'>
+        {citation.metadata.sourceName}
+      </span>
+    </button>
+  )
+
+  if (hasPlayableVideo) return chipButton
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={<span className='inline-flex max-w-[15ch] cursor-not-allowed align-middle' />}
+      >
+        {chipButton}
+      </TooltipTrigger>
+      <TooltipContent>{citationNotReadyTooltip(citation.metadata.videoStatus)}</TooltipContent>
+    </Tooltip>
+  )
 }

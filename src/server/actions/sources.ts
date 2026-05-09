@@ -1,6 +1,6 @@
 'use server'
 
-import { asc, desc, eq, and, gte, lte, sql } from 'drizzle-orm'
+import { asc, desc, eq, and, gte, lte, sql, inArray } from 'drizzle-orm'
 import { unstable_noStore as noStore } from 'next/cache'
 import db from '~/db'
 import { chats, collections, ragChunks, sources, transcriptSegments } from '~/db/schema'
@@ -192,6 +192,38 @@ export async function markSourceReady(id: string) {
   await db.update(sources).set({ status: 'ready' }).where(eq(sources.id, id))
 }
 
+export async function saveMuxUploadId(sourceId: string, uploadId: string) {
+  await db
+    .update(sources)
+    .set({ videoStatus: 'processing', muxUploadId: uploadId })
+    .where(eq(sources.id, sourceId))
+}
+
+export async function saveMuxAssetId(sourceId: string, assetId: string) {
+  await db.update(sources).set({ muxAssetId: assetId }).where(eq(sources.id, sourceId))
+}
+
+export async function markSourceVideoReady(sourceId: string, assetId: string, playbackId: string) {
+  await db
+    .update(sources)
+    .set({
+      videoStatus: 'ready',
+      muxAssetId: assetId,
+      muxPlaybackId: playbackId,
+    })
+    .where(eq(sources.id, sourceId))
+}
+
+export async function markSourceVideoFailed(sourceId: string, error: string) {
+  await db
+    .update(sources)
+    .set({
+      videoStatus: 'failed',
+      error,
+    })
+    .where(eq(sources.id, sourceId))
+}
+
 export async function saveFalRequestId(sourceId: string, requestId: string) {
   await db.update(sources).set({ falRequestId: requestId }).where(eq(sources.id, sourceId))
 }
@@ -374,3 +406,14 @@ export async function getChatUsageById(chatId: string) {
 }
 
 export type ChatUsageSummary = Awaited<ReturnType<typeof getChatUsageById>>
+
+export async function getSourceVideoDataByIds(sourceIds: string[]) {
+  return await db
+    .select({
+      sourceId: sources.id,
+      muxPlaybackId: sources.muxPlaybackId,
+      videoStatus: sources.videoStatus,
+    })
+    .from(sources)
+    .where(inArray(sources.id, sourceIds))
+}

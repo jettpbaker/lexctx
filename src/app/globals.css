@@ -27,6 +27,10 @@
   --destructive-foreground: oklch(0.6409 0.155 12.04);
   --success: oklch(0.7121 0.0947 155.75);
   --warn: oklch(0.6409 0.155 12.04);
+  --citation: oklch(0.5 0.16 252);
+  /* Decorative low-contrast text for big editorial moments. Barely darker
+     than background on light, barely brighter on dark. */
+  --whisper: oklch(0.91 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -89,6 +93,8 @@
   --destructive-foreground: oklch(0.6409 0.155 12.04);
   --success: oklch(0.7121 0.0947 155.75);
   --warn: oklch(0.6409 0.155 12.04);
+  --citation: oklch(0.78 0.1 252);
+  --whisper: oklch(0.3 0 0);
   --border: oklch(0.2768 0 0);
   --input: oklch(0.2768 0 0);
   --ring: oklch(0.861 0.0014 286.37);
@@ -132,6 +138,7 @@
 @theme inline {
   --font-sans: 'Geist', 'Geist Fallback';
   --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-serif: 'EB Garamond', ui-serif, Georgia, 'Times New Roman', serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -150,6 +157,8 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-warn: var(--warn);
+  --color-citation: var(--citation);
+  --color-whisper: var(--whisper);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -247,6 +256,63 @@
 
 @theme inline {
   --animate-file-drag-sweep: file-drag-sweep 1250ms var(--ease-in-out-cubic) forwards infinite;
+}
+
+/*
+ * Mux Player citation viewer overrides.
+ *
+ * Mux's default ("gerwig") theme sets a few critical custom properties
+ * directly on `<media-control-bar>` from inside its shadow DOM:
+ *
+ *   media-control-bar {
+ *     --media-control-padding: 6px;
+ *     --media-control-hover-background: var(--_accent-color);
+ *   }
+ *
+ * Setting these on the host doesn't override that — the inner element
+ * declaration wins. We instead reach `::part(control-bar)` from outside the
+ * shadow DOM (specificity 0,0,2 beats the inner 0,0,1), then every descendant
+ * (buttons, time display, range, etc.) inherits the new values via custom
+ * property inheritance.
+ */
+.lex-mux-player {
+  --media-focus-box-shadow: none;
+
+  --airplay-button: none;
+  --cast-button: none;
+  --fullscreen-button: none;
+  --pip-button: none;
+  --rendition-menu-button: none;
+  --seek-backward-button: none;
+  --seek-forward-button: none;
+}
+
+.lex-mux-player::part(control-bar) {
+  --media-control-padding: 16px;
+  --media-control-background: transparent;
+  --media-control-hover-background: rgb(0 0 0 / 0.45);
+}
+
+.lex-mux-player::part(bottom volume range) {
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition:
+    width 160ms var(--ease-out-cubic),
+    opacity 120ms var(--ease-out-cubic);
+}
+
+.lex-mux-player:hover::part(bottom volume range),
+.lex-mux-player:focus-within::part(bottom volume range) {
+  width: 100px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.lex-mux-player:focus,
+.lex-mux-player:focus-visible {
+  outline: none;
 }
 
 @layer base {

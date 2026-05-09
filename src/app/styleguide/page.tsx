@@ -1,4 +1,9 @@
-import { COLLECTIONS_GALLERY, ROW_GALLERY } from '~/app/styleguide/mock_data'
+import {
+  COLLECTIONS_GALLERY,
+  ROW_GALLERY,
+  VIDEO_CHIP_GALLERY,
+  VIDEO_CHIP_ROWS,
+} from '~/app/styleguide/mock_data'
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '~/components/ai-elements/reasoning'
 import { ToolStatusRow } from '~/components/chat/tool_status_row'
 import { toolUiMapping } from '~/components/chat/toolUiMapping'
@@ -35,6 +40,38 @@ export default function StyleguidePage() {
       </Section>
 
       <Section
+        title='Video status chip'
+        description='Secondary chip for the video upload/Mux pipeline. Demoted from the primary chat status because chat does not depend on video. Hidden when video is `pending` or `ready` — surfaces only while there is something to communicate. Rows below all have chat status `ready`, so the StatusLabel slot shows an explicit `ready` label alongside the chip to disambiguate "chat is usable, video is still working" from "this source is still processing."'
+      >
+        <div className='grid gap-6 md:grid-cols-2'>
+          <SidebarFrame>
+            <div className='flex flex-col'>
+              {VIDEO_CHIP_ROWS.map((source) => (
+                <SourceRow key={source.id} source={source} />
+              ))}
+            </div>
+          </SidebarFrame>
+          <div className='flex flex-col gap-1 rounded-lg border border-border p-4'>
+            <p className='mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase'>
+              States
+            </p>
+            <ul className='flex flex-col gap-1.5 text-xs text-muted-foreground'>
+              {VIDEO_CHIP_GALLERY.map((entry, i) => (
+                <li key={i} className='flex items-center justify-between gap-2'>
+                  <span>{entry.label}</span>
+                  <code className='font-mono text-[10px] tracking-wide text-muted-foreground/70'>
+                    {entry.videoStatus.kind}
+                    {entry.videoStatus.kind === 'uploading' &&
+                      ` ${Math.round(entry.videoStatus.progress * 100)}%`}
+                  </code>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </Section>
+
+      <Section
         title='Collection group'
         description='Sticky header with name, ratio, add, and actions menu. Aggregate progress bar appears under the description while anything is in flight.'
       >
@@ -63,7 +100,7 @@ export default function StyleguidePage() {
         <div className='grid gap-6 md:grid-cols-3'>
           {TOOL_STATES.map((state) => (
             <div key={state} className='flex flex-col rounded-lg border border-border p-4'>
-              <p className='mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground'>
+              <p className='mb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase'>
                 {state}
               </p>
               <Reasoning defaultOpen>

@@ -15,12 +15,15 @@ import {
 import { Separator } from '~/components/ui/separator'
 import { useSourceStore } from '~/hooks/useStore'
 import tickPipeline from '~/lib/localPipeline/tickPipeline'
+import { abortVideoUpload } from '~/lib/localPipeline/videoUploadRegistry'
 import { COLLECTIONS_WITH_SOURCES_KEY } from '~/lib/query_keys'
 import {
   dbStatusToSourceUiStatus,
   isInFlight,
   labelForStatus,
   localAudioStatusToSourceUiStatus,
+  localVideoStatusToVideoUiStatus,
+  mergeVideoStatus,
   shouldUseLocalSourceStatus,
 } from '~/lib/source_status'
 import { deleteCollection } from '~/server/actions/deleteCollection'
@@ -200,6 +203,7 @@ export default function CollectionsSidebarClient({
 
       const previousCollections = queryClient.getQueryData<CollectionsWithSources>(queryKey)
 
+      abortVideoUpload(source.id)
       removeSource(source.id)
 
       queryClient.setQueryData<CollectionsWithSources>(queryKey, (current) =>
@@ -233,6 +237,7 @@ export default function CollectionsSidebarClient({
       const previousCollections = queryClient.getQueryData<CollectionsWithSources>(queryKey)
 
       collection.sources.forEach((source) => {
+        abortVideoUpload(source.id)
         removeSource(source.id)
       })
 
@@ -444,6 +449,7 @@ function sourceRowFromDbSource(source: DbSource, localSource?: LocalSourceType):
     fileSize: source.fileSize,
     createdAt: source.createdAt,
     status: localStatus ?? dbStatus,
+    videoStatus: mergeVideoStatus(source, localSource),
   }
 }
 
@@ -454,6 +460,7 @@ function sourceRowFromLocalSource(source: LocalSourceType): SourceRowSource {
     fileSize: null,
     createdAt: source.createdAt,
     status: localAudioStatusToSourceUiStatus(source),
+    videoStatus: localVideoStatusToVideoUiStatus(source),
   }
 }
 

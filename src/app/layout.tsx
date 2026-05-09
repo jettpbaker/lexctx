@@ -1,5 +1,5 @@
 import './globals.css'
-import { Geist, Geist_Mono, Roboto } from 'next/font/google'
+import { EB_Garamond, Geist, Geist_Mono, Roboto } from 'next/font/google'
 import QueryProvider from '~/components/query_provider'
 import { ThemeProvider } from '~/components/theme-provider'
 import { TooltipProvider } from '~/components/ui/tooltip'
@@ -12,6 +12,12 @@ const geist = Geist({ subsets: ['latin'], variable: '--font-sans' })
 const fontMono = Geist_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
+})
+
+const fontSerif = EB_Garamond({
+  subsets: ['latin'],
+  variable: '--font-serif',
+  display: 'swap',
 })
 
 export default function RootLayout({
@@ -30,6 +36,7 @@ export default function RootLayout({
         robotoHeading.variable,
         'font-sans',
         geist.variable,
+        fontSerif.variable,
         'h-full'
       )}
     >

@@ -11,7 +11,8 @@ export type AudioStatusType =
 export type VideoStatusType =
   | { stage: 'pending' }
   | { stage: 'uploading'; progress: number }
-  | { stage: 'done'; muxPlaybackId: string }
+  | { stage: 'uploaded' }
+  | { stage: 'failed'; error: string }
 
 export type LocalSourceType = {
   id: string
