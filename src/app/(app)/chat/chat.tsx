@@ -1,6 +1,7 @@
 'use client'
 
 import type { LexMessage } from '~/app/api/chat/route'
+import type { LectureChunkSearchResult } from '~/server/actions/searchSources'
 
 import { useChat } from '@ai-sdk/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -37,13 +38,6 @@ export default function Chat({
   const chatUsageQuery = useQuery({
     queryKey: [CHAT_USAGE_KEY, id],
     queryFn: () => getChatUsageById(id),
-    // initialData: {
-    //   totalInputTokens: 0,
-    //   totalCachedInputTokens: 0,
-    //   totalOutputTokens: 0,
-    //   totalTokens: 0,
-    //   totalCostMicroUsd: 0,
-    // },
   })
 
   const chatUsage = chatUsageQuery.data
@@ -180,6 +174,28 @@ const MessageParts = ({
   isLastMessage: boolean
   isStreaming: boolean
 }) => {
+  function getCitationSources(message: UIMessage) {
+    const sources = new Map<string, LectureChunkSearchResult>()
+
+    for (const part of message.parts) {
+      if (!isToolUIPart(part)) continue
+      if (part.state !== 'output-available') continue
+      if (getToolName(part) !== 'sourceSearch') continue
+
+      const output = part.output as {
+        results?: LectureChunkSearchResult[]
+      }
+
+      for (const result of output.results ?? []) {
+        sources.set(result.citationId, result)
+      }
+    }
+
+    return sources
+  }
+
+  const citationSources = getCitationSources(message)
+
   return (
     <>
       {message.parts.map((part, i) => {
@@ -221,7 +237,30 @@ const MessageParts = ({
         }
 
         if (part.type === 'text') {
-          return <MessageResponse key={`${message.id}-${i}`}>{part.text}</MessageResponse>
+          return (
+            <MessageResponse
+              key={`${message.id}-${i}`}
+              components={{
+                a: ({ href, children }) => {
+                  if (href?.startsWith('#citation-')) {
+                    const citationId = href.replace('#citation-', '')
+                    const source = citationSources.get(citationId)
+                    const startTime = source?.metadata.startSeconds
+                    const sourceName = source?.metadata.sourceName
+
+                    return (
+                      <span key={`${citationId}-${i}`}>
+                        {sourceName} at {startTime}
+                      </span>
+                    )
+                  }
+                  return <a href={href}>{children}</a>
+                },
+              }}
+            >
+              {part.text}
+            </MessageResponse>
+          )
         }
 
         return null
