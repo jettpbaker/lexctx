@@ -1,10 +1,6 @@
 'use server'
 
-import type { SearchResultRow } from 'chromadb'
-
 import { hybridSearch } from '~/db/chroma'
-
-import { getSourceVideoDataByIds } from './sources'
 
 export type LectureChunkSearchMetadata = {
   sourceId: string
@@ -14,11 +10,10 @@ export type LectureChunkSearchMetadata = {
   chunkIndex: number
   startSeconds: number
   endSeconds: number
-  muxPlaybackId: string | null
-  videoStatus: 'pending_upload' | 'uploading' | 'processing' | 'ready' | 'failed' | null
 }
 
-export type LectureChunkSearchResult = SearchResultRow & {
+export type LectureChunkSearchResult = {
+  id: string
   citationId: string
   document: string
   metadata: LectureChunkSearchMetadata
@@ -28,32 +23,14 @@ export type LectureChunkSearchResult = SearchResultRow & {
 export async function searchSources(query: string): Promise<LectureChunkSearchResult[]> {
   const results = await hybridSearch(query)
 
-  const typedResults = results.map((result) => ({
-    ...result,
+  const typedResults = results.map((result, index) => ({
+    id: result.id,
+    document: result.document ?? '',
+    score: result.score ?? 0,
+    citationId: `${result.metadata?.sourceId}:chunk:${result.metadata?.chunkIndex}`,
+    citationLabel: `S${index + 1}`,
     metadata: result.metadata as LectureChunkSearchMetadata,
   }))
 
-  const sourceIds = [...new Set(typedResults.map((result) => result.metadata.sourceId))]
-
-  console.log('sourceIds', sourceIds)
-  const sourceVideoData = await getSourceVideoDataByIds(sourceIds)
-  console.log('sourceVideoData', sourceVideoData)
-  const sourceVideoDataMap = new Map(sourceVideoData.map((data) => [data.sourceId, data]))
-
-  return typedResults.map((result, index) => {
-    const sourceVideoData = sourceVideoDataMap.get(result.metadata.sourceId)
-
-    return {
-      id: result.id,
-      citationId: `S${index + 1}`,
-      document: result.document ?? '',
-      metadata: {
-        ...result.metadata,
-        muxPlaybackId: sourceVideoData?.muxPlaybackId ?? null,
-        videoStatus: sourceVideoData?.videoStatus ?? null,
-      },
-
-      score: result.score ?? 0,
-    }
-  })
+  return typedResults
 }

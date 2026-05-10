@@ -1,10 +1,17 @@
+'use client'
+
+import type { HydratedCitation } from '~/server/actions/getCitationHydrationByIds'
+
+import { useState } from 'react'
 import {
+  CITATION_CHIP_GALLERY,
   COLLECTIONS_GALLERY,
   ROW_GALLERY,
   VIDEO_CHIP_GALLERY,
   VIDEO_CHIP_ROWS,
 } from '~/app/styleguide/mock_data'
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '~/components/ai-elements/reasoning'
+import { CitationChip, CitationChipPending } from '~/components/chat/citation_chip'
 import { ToolStatusRow } from '~/components/chat/tool_status_row'
 import { toolUiMapping } from '~/components/chat/toolUiMapping'
 import {
@@ -12,6 +19,7 @@ import {
   type CollectionGroupCollection,
 } from '~/components/sources/collection_group'
 import { SourceRow } from '~/components/sources/source_row'
+import { Button } from '~/components/ui/button'
 
 const TOOL_NAMES = Object.keys(toolUiMapping) as Array<keyof typeof toolUiMapping>
 const TOOL_STATES = ['in-flight', 'completed', 'error'] as const
@@ -94,6 +102,40 @@ export default function StyleguidePage() {
       </Section>
 
       <Section
+        title='Citation chip'
+        description='Inline chip rendered in assistant messages where the model emits a citation link. Pending state is a fixed-width skeleton shown while citation hydration is loading. Ready chips are clickable and open the source video at the cited timestamp; non-ready chips are disabled with a tooltip explaining why.'
+      >
+        <div className='flex flex-col gap-3 rounded-lg border border-border p-4'>
+          {CITATION_CHIP_GALLERY.map((entry, i) => (
+            <div key={i} className='flex items-baseline justify-between gap-4 text-sm'>
+              <p className='leading-relaxed text-foreground'>
+                A short claim from the lecture goes here.{' '}
+                {entry.citation ? (
+                  <CitationChip citation={entry.citation} onOpen={() => {}} />
+                ) : (
+                  <CitationChipPending />
+                )}{' '}
+                And the sentence continues.
+              </p>
+              <code className='font-mono text-[10px] tracking-wide whitespace-nowrap text-muted-foreground/70'>
+                {entry.label}
+              </code>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section
+        title='Citation chip animations'
+        description="Pending → hydrated is a clean quick fade from skeleton to real chip. Processing → ready stays mounted and crossfades from the muted disabled background to the citation blue via the chip's own transition-colors. Both honor prefers-reduced-motion."
+      >
+        <div className='grid gap-4 md:grid-cols-2'>
+          <PendingHydrationDemo />
+          <ProcessingReadyDemo />
+        </div>
+      </Section>
+
+      <Section
         title='Chat tool statuses'
         description='Every tool from toolUiMapping rendered in each lifecycle state. The reasoning trigger row is included on top so icon/text alignment can be checked across rows.'
       >
@@ -148,6 +190,93 @@ function SidebarFrame({ children, className }: { children: React.ReactNode; clas
     >
       {children}
     </div>
+  )
+}
+
+function DemoFrame({
+  label,
+  onReplay,
+  children,
+}: {
+  label: string
+  onReplay: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className='flex flex-col gap-3 rounded-lg border border-border p-4'>
+      <div className='flex items-center justify-between'>
+        <p className='text-xs font-medium tracking-wide text-muted-foreground uppercase'>{label}</p>
+        <Button size='sm' variant='outline' onClick={onReplay}>
+          Replay
+        </Button>
+      </div>
+      <p className='text-sm leading-relaxed text-foreground'>{children}</p>
+    </div>
+  )
+}
+
+const HYDRATED_DEMO_CITATION: HydratedCitation = {
+  citationId: 'demo-source:chunk:0',
+  sourceId: 'demo-source',
+  sourceName: 'cs50-10m-aac.mp4',
+  collectionId: 'demo-collection',
+  collectionName: 'CS50',
+  chunkIndex: 0,
+  startSeconds: 124,
+  endSeconds: 154,
+  muxPlaybackId: 'demo-playback',
+  muxBlurDataUrl: null,
+  muxBlurAspectRatio: null,
+  videoStatus: 'ready',
+}
+
+function PendingHydrationDemo() {
+  // `phase` drives pending ↔ hydrated swap; `nonce` forces remount so background
+  // transition + stagger replay cleanly when Replay is clicked.
+  const [phase, setPhase] = useState<'pending' | 'hydrated'>('hydrated')
+  const [nonce, setNonce] = useState(0)
+
+  function replay() {
+    setPhase('pending')
+    setNonce((n) => n + 1)
+    setTimeout(() => setPhase('hydrated'), 600)
+  }
+
+  return (
+    <DemoFrame label='Pending → hydrated' onReplay={replay}>
+      A short claim from the lecture goes here.{' '}
+      {phase === 'pending' ? (
+        <CitationChipPending />
+      ) : (
+        <CitationChip key={nonce} citation={HYDRATED_DEMO_CITATION} onOpen={() => {}} />
+      )}{' '}
+      And the sentence continues.
+    </DemoFrame>
+  )
+}
+
+function ProcessingReadyDemo() {
+  // Same mounted chip throughout; toggling videoStatus flips `disabled` so
+  // transition-colors runs muted → citation blue.
+  const [status, setStatus] = useState<HydratedCitation['videoStatus']>('processing')
+
+  function replay() {
+    setStatus('processing')
+    setTimeout(() => setStatus('ready'), 600)
+  }
+
+  const demoCitation: HydratedCitation = {
+    ...HYDRATED_DEMO_CITATION,
+    sourceName: 'lecture_05_recursion.mp4',
+    videoStatus: status,
+    muxPlaybackId: status === 'ready' ? 'demo-playback' : null,
+  }
+
+  return (
+    <DemoFrame label='Processing → ready' onReplay={replay}>
+      A short claim from the lecture goes here.{' '}
+      <CitationChip citation={demoCitation} onOpen={() => {}} /> And the sentence continues.
+    </DemoFrame>
   )
 }
 

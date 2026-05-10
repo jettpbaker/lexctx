@@ -8,7 +8,16 @@ import { code } from '@streamdown/code'
 import { math } from '@streamdown/math'
 import { mermaid } from '@streamdown/mermaid'
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
-import { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  createContext,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { Streamdown } from 'streamdown'
 import { buildScrollFadeMask, useScrollEdges } from '~/components/ai-elements/scroll-fade'
 import { Button } from '~/components/ui/button'

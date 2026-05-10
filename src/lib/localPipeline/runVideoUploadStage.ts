@@ -1,9 +1,6 @@
 import * as UpChunk from '@mux/upchunk'
 import { useSourceStore } from '~/hooks/useStore'
-import {
-  registerVideoUpload,
-  unregisterVideoUpload,
-} from '~/lib/localPipeline/videoUploadRegistry'
+import { registerVideoUpload, unregisterVideoUpload } from '~/lib/localPipeline/videoUploadRegistry'
 
 type CreateMuxUploadResponse = {
   uploadId: string
@@ -36,8 +33,6 @@ export default async function runVideoUploadStage(id: string, onDone: () => void
     const { url } = (await res.json()) as CreateMuxUploadResponse
 
     await new Promise<void>((resolve, reject) => {
-      let lastLoggedProgress = 0
-
       const upload = UpChunk.createUpload({
         endpoint: url,
         file: video,
@@ -47,11 +42,6 @@ export default async function runVideoUploadStage(id: string, onDone: () => void
 
       upload.on('progress', (progress) => {
         updateVideoUploadProgress(id, progress.detail)
-
-        if (progress.detail - lastLoggedProgress >= 1 || progress.detail === 100) {
-          lastLoggedProgress = progress.detail
-          console.log('[video upload progress]', { sourceId: id, progress: progress.detail })
-        }
       })
 
       upload.on('error', (error) => {
@@ -62,7 +52,6 @@ export default async function runVideoUploadStage(id: string, onDone: () => void
 
       upload.on('success', () => {
         unregisterVideoUpload(id)
-        console.log('[video upload success]', { sourceId: id })
         resolve()
       })
     })

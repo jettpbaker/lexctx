@@ -47,6 +47,8 @@ export const sources = p.pgTable(
     muxUploadId: p.text('mux_upload_id'),
     muxAssetId: p.text('mux_asset_id'),
     muxPlaybackId: p.text('mux_playback_id'),
+    muxBlurDataUrl: p.text('mux_blur_data_url'),
+    muxBlurAspectRatio: p.doublePrecision('mux_blur_aspect_ratio'),
     falRequestId: p.text('fal_request_id'),
     transcriptText: p.text('transcript_text'),
     error: p.text('error'),

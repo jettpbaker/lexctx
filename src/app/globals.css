@@ -181,15 +181,6 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-@keyframes lex-text-shimmer-pan {
-  from {
-    background-position: 100% center;
-  }
-  to {
-    background-position: 0% center;
-  }
-}
-
 @keyframes usage-enter {
   from {
     opacity: 0;
@@ -257,6 +248,18 @@
 @theme inline {
   --animate-file-drag-sweep: file-drag-sweep 1250ms var(--ease-in-out-cubic) forwards infinite;
 }
+
+/*
+ * Citation chip transitions are handled entirely by the chip's own
+ * `transition-colors` utility:
+ *  - Pending → hydrated: the new chip mounts with `bg-muted` (matching the
+ *    skeleton, so there is no transparent frame), then on the next animation
+ *    frame swaps to `bg-citation/15` and the transition crossfades it in.
+ *  - Processing → ready: same mechanism — `disabled:bg-muted` stops applying
+ *    when `disabled` lifts and `bg-citation/15` fades in.
+ *  No keyframes or overlays needed; keeps text crisp and avoids alpha
+ *  stacking artifacts from layered citation tints.
+ */
 
 /*
  * Mux Player citation viewer overrides.

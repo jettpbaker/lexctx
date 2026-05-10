@@ -1,16 +1,14 @@
 'use client'
 
 import type { LexMessage } from '~/app/api/chat/route'
-import type { LectureChunkSearchResult } from '~/server/actions/searchSources'
+import type { HydratedCitation } from '~/server/actions/getCitationHydrationByIds'
 
 import { useChat } from '@ai-sdk/react'
-import { PlayIcon } from '@hugeicons/core-free-icons'
-import { HugeiconsIcon } from '@hugeicons/react'
 import MuxPlayer from '@mux/mux-player-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { DefaultChatTransport, getToolName, isToolUIPart, UIMessage } from 'ai'
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Conversation,
   ConversationContent,
@@ -20,10 +18,11 @@ import { Message, MessageContent, MessageResponse } from '~/components/ai-elemen
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '~/components/ai-elements/reasoning'
 import { Shimmer } from '~/components/ai-elements/shimmer'
 import { ChatComposer } from '~/components/chat/chat_composer'
+import { CitationChip, CitationChipPending } from '~/components/chat/citation_chip'
 import { ToolStatusRow } from '~/components/chat/tool_status_row'
 import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
-import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip'
-import { CHAT_USAGE_KEY } from '~/lib/query_keys'
+import { CHAT_USAGE_KEY, CITATIONS_KEY } from '~/lib/query_keys'
+import { getCitationHydrationByIds } from '~/server/actions/getCitationHydrationByIds'
 import { getChatUsageById } from '~/server/actions/sources'
 
 export default function Chat({
@@ -95,6 +94,46 @@ export default function Chat({
     (latestMessage?.role === 'user' ||
       (latestMessage?.role === 'assistant' && !latestAssistantHasVisibleParts))
 
+  const citationIds = [...new Set(parseCitationIdsFromMessages(messages))].sort()
+
+  const hydratedCitationsQuery = useQuery({
+    queryKey: [CITATIONS_KEY, citationIds],
+    queryFn: () => getCitationHydrationByIds(citationIds),
+    enabled: citationIds.length > 0,
+    refetchInterval: (query) => {
+      const hasProcessingCitation = (query.state.data ?? []).some(
+        (citation) =>
+          citation.videoStatus === 'pending_upload' ||
+          citation.videoStatus === 'uploading' ||
+          citation.videoStatus === 'processing'
+      )
+      return hasProcessingCitation ? 5000 : false
+    },
+  })
+
+  const citationsById = useMemo(() => {
+    return new Map(
+      hydratedCitationsQuery.data?.map((citation) => [citation.citationId, citation]) ?? []
+    )
+  }, [hydratedCitationsQuery.data])
+
+  function parseCitationIdsFromMessages(messages: UIMessage[]) {
+    const ids: string[] = []
+    const citationHrefRegex = /\]\(#citation-([^)]+)\)/g
+
+    messages.forEach((message) => {
+      message.parts.forEach((part) => {
+        if (part.type !== 'text') return
+
+        for (const match of part.text.matchAll(citationHrefRegex)) {
+          ids.push(match[1])
+        }
+      })
+    })
+
+    return ids
+  }
+
   return (
     <div className='relative flex h-dvh min-h-0 w-full flex-1 flex-col overflow-hidden pt-[36px]'>
       <Conversation>
@@ -123,6 +162,8 @@ export default function Chat({
                   <MessageContent>
                     <MessageParts
                       message={message}
+                      citationsById={citationsById}
+                      citationHydrationUpdatedAt={hydratedCitationsQuery.dataUpdatedAt}
                       isLastMessage={isLastMessage}
                       isStreaming={status === 'streaming'}
                     />
@@ -172,38 +213,21 @@ function hasVisibleAssistantParts(message: UIMessage) {
 
 const MessageParts = ({
   message,
+  citationsById,
+  citationHydrationUpdatedAt,
   isLastMessage,
   isStreaming,
 }: {
   message: UIMessage
+  citationsById: Map<string, HydratedCitation>
+  citationHydrationUpdatedAt: number
   isLastMessage: boolean
   isStreaming: boolean
 }) => {
-  const [selectedCitation, setSelectedCitation] = useState<LectureChunkSearchResult | null>(null)
-
-  function getCitationSources(message: UIMessage) {
-    const sources = new Map<string, LectureChunkSearchResult>()
-
-    for (const part of message.parts) {
-      if (!isToolUIPart(part)) continue
-      if (part.state !== 'output-available') continue
-      if (getToolName(part) !== 'sourceSearch') continue
-
-      const output = part.output as {
-        results?: LectureChunkSearchResult[]
-      }
-
-      for (const result of output.results ?? []) {
-        sources.set(result.citationId, result)
-      }
-    }
-
-    return sources
-  }
-
-  const citationSources = getCitationSources(message)
-
-  const selectedPlaybackId = selectedCitation?.metadata.muxPlaybackId
+  const [selectedCitation, setSelectedCitation] = useState<HydratedCitation | null>(null)
+  const selectedPlaybackId = selectedCitation?.muxPlaybackId
+  const selectedBlurDataUrl = selectedCitation?.muxBlurDataUrl
+  const selectedBlurAspectRatio = selectedCitation?.muxBlurAspectRatio
 
   return (
     <>
@@ -248,15 +272,20 @@ const MessageParts = ({
         if (part.type === 'text') {
           return (
             <MessageResponse
-              key={`${message.id}-${i}`}
+              key={`${message.id}-${i}-${citationHydrationUpdatedAt}`}
               components={{
                 a: ({ href, children }) => {
                   if (href?.startsWith('#citation-')) {
                     const citationId = href.replace('#citation-', '')
-                    const citation = citationSources.get(citationId)
+                    const citation = citationsById.get(citationId)
 
                     if (!citation) {
-                      return <span>{children}</span>
+                      return (
+                        <>
+                          {' '}
+                          <CitationChipPending />
+                        </>
+                      )
                     }
 
                     return (
@@ -288,11 +317,11 @@ const MessageParts = ({
         }}
       >
         <DialogContent
-          className='max-w-[90vw] border-none bg-transparent p-0 shadow-none sm:max-w-[90vw]'
+          className='max-w-[90vw] border-none bg-transparent p-0 shadow-none sm:max-w-[90vw] data-open:duration-400 data-open:ease-[var(--ease-out-quart)] data-closed:duration-0'
           showCloseButton={false}
         >
           <DialogTitle className='sr-only'>
-            {selectedCitation?.metadata.sourceName ?? 'Lecture video'}
+            {selectedCitation?.sourceName ?? 'Lecture video'}
           </DialogTitle>
 
           {selectedPlaybackId && (
@@ -303,11 +332,13 @@ const MessageParts = ({
               accentColor='var(--color-success)'
               primaryColor='oklch(0.985 0 0)'
               secondaryColor='oklch(0 0 0 / 0.5)'
-              title={selectedCitation?.metadata.sourceName}
+              title={selectedCitation?.sourceName}
               className='lex-mux-player aspect-video w-[90vw] overflow-hidden rounded-lg'
               playbackId={selectedPlaybackId}
-              startTime={selectedCitation?.metadata.startSeconds}
-              thumbnailTime={selectedCitation?.metadata.startSeconds}
+              placeholder={selectedBlurDataUrl ?? undefined}
+              startTime={selectedCitation?.startSeconds}
+              style={selectedBlurAspectRatio ? { aspectRatio: selectedBlurAspectRatio } : undefined}
+              thumbnailTime={selectedCitation?.startSeconds}
               streamType='on-demand'
             />
           )}
@@ -330,73 +361,4 @@ const ToolPart = ({ part }: { part: UIMessage['parts'][number] }) => {
   const status = part.state === 'output-error' ? 'error' : isInFlight ? 'in-flight' : 'completed'
 
   return <ToolStatusRow toolName={toolName} status={status} />
-}
-
-function formatTimestamp(seconds: number) {
-  const total = Math.max(0, Math.floor(seconds))
-  const h = Math.floor(total / 3600)
-  const m = Math.floor((total % 3600) / 60)
-  const s = total % 60
-  if (h > 0) {
-    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-  }
-  return `${m}:${s.toString().padStart(2, '0')}`
-}
-
-function citationNotReadyTooltip(status: LectureChunkSearchResult['metadata']['videoStatus']) {
-  switch (status) {
-    case 'failed':
-      return 'Video could not be processed'
-    case 'uploading':
-    case 'pending_upload':
-      return 'Video still uploading'
-    case 'processing':
-      return 'Video still processing'
-    default:
-      return 'Video not ready yet'
-  }
-}
-
-function CitationChip({
-  citation,
-  onOpen,
-}: {
-  citation: LectureChunkSearchResult
-  onOpen: (citation: LectureChunkSearchResult) => void
-}) {
-  const startTime = citation.metadata.startSeconds ?? 0
-  const hasPlayableVideo =
-    citation.metadata.videoStatus === 'ready' && Boolean(citation.metadata.muxPlaybackId)
-
-  const chipButton = (
-    <button
-      type='button'
-      disabled={!hasPlayableVideo}
-      title={
-        hasPlayableVideo
-          ? `Open ${citation.metadata.sourceName} at ${formatTimestamp(startTime)}`
-          : undefined
-      }
-      onClick={() => onOpen(citation)}
-      className='inline-flex h-[1lh] max-w-[15ch] cursor-pointer items-center gap-1 rounded-sm bg-citation/15 px-1.5 align-middle leading-[inherit] text-citation transition-colors [text-box-edge:cap_alphabetic] [text-box-trim:trim-both] hover:bg-citation/25 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:hover:bg-muted'
-    >
-      <HugeiconsIcon icon={PlayIcon} strokeWidth={2.25} className='size-[1em] shrink-0' />
-      <span className='min-w-0 overflow-hidden [mask-image:linear-gradient(to_right,black_calc(100%-1em),transparent)] whitespace-nowrap'>
-        {citation.metadata.sourceName}
-      </span>
-    </button>
-  )
-
-  if (hasPlayableVideo) return chipButton
-
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={<span className='inline-flex max-w-[15ch] cursor-not-allowed align-middle' />}
-      >
-        {chipButton}
-      </TooltipTrigger>
-      <TooltipContent>{citationNotReadyTooltip(citation.metadata.videoStatus)}</TooltipContent>
-    </Tooltip>
-  )
 }

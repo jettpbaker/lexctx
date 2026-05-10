@@ -1,10 +1,7 @@
 import Mux from '@mux/mux-node'
 import { sleep } from 'workflow'
 import { env } from '~/env'
-import {
-  MAX_MUX_DELETE_CLEANUP_POLLS,
-  MUX_DELETE_CLEANUP_POLL_INTERVAL,
-} from '~/lib/constants'
+import { MAX_MUX_DELETE_CLEANUP_POLLS, MUX_DELETE_CLEANUP_POLL_INTERVAL } from '~/lib/constants'
 
 export async function deleteMuxVideoAfterUploadCompletes(muxUploadId: string) {
   'use workflow'

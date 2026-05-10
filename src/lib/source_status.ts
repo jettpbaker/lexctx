@@ -201,8 +201,11 @@ export function isVideoChipVisible(status: VideoUiStatus): boolean {
   return status.kind !== 'pending' && status.kind !== 'ready'
 }
 
-export function isInFlight(status: SourceUiStatus): boolean {
-  return status.kind !== 'ready' && status.kind !== 'failed'
+export function isInFlight(status: SourceUiStatus, videoStatus: VideoUiStatus): boolean {
+  const sourceIsInflight = status.kind !== 'ready' && status.kind !== 'failed'
+  const videoIsInflight = videoStatus.kind !== 'failed' && videoStatus.kind !== 'ready'
+
+  return sourceIsInflight || videoIsInflight
 }
 
 export type CollectionStatusSummary = {
