@@ -1,6 +1,7 @@
 import type { OpenAILanguageModelResponsesOptions } from '@ai-sdk/openai'
 
 import {
+  gateway,
   streamText,
   UIMessage,
   convertToModelMessages,
@@ -16,7 +17,7 @@ import { ChatUsage, getChatById, upsertChat } from '~/server/actions/sources'
 import { modelPriceMapping } from '~/server/ai/modelPriceMapping'
 import { chatTools } from '~/server/ai/tools'
 
-const CHAT_MODEL_ID = 'openai/gpt-5.4-mini'
+const CHAT_MODEL_ID = 'openai/gpt-5.5'
 const CHAT_MODEL_PRICE = modelPriceMapping['GPT-5.5']
 
 export function gzipAsync(input: string): Promise<Buffer> {
@@ -67,22 +68,39 @@ function getSystemPrompt(timeZone: unknown, locale: unknown) {
     timeZone: resolvedTimeZone,
   }).format(now)
 
-  return `You are the assistant inside lexctx, an app where the user uploads sources — lectures, talks, recordings, documents, etc. — and organizes them into collections. You can search across their sources with the sourceSearch tool, list their collections and sources, and look things up on the web.
+  return `You are the assistant inside lexctx, an app where users upload lectures, talks, recordings, documents, and organize them into collections.
 
-When a question might depend on what's in the user's uploaded sources, sourceSearch is usually the right way to answer it. For general questions that don't rely on their content, answer directly.
+Your main job is to answer from the user's uploaded sources when the question may depend on them.
 
-Use sourceSearch without filters by default when the user wants broad synthesis across sources or when the relevant source is uncertain. When the user clearly asks about a specific source, lecture, collection, week, or topic, use listSources or listCollections first if you need IDs, then pass sourceIds or collectionIds to sourceSearch. If a filtered search returns weak or no results, retry with a broader sourceSearch.
+Tool use:
+- Use sourceSearch for questions about uploaded content, lectures, sources, collections, course material, or anything the user likely expects lexctx to know from their library.
+- Use sourceSearch without filters for broad synthesis or uncertain scope.
+- If the user names a specific source, lecture, week, collection, or topic, use listSources, listSourcesForCollection, or listCollections when you need IDs, then search with sourceIds or collectionIds.
+- If a search result is relevant but too narrow, use getNearbyRagChunks to inspect surrounding context before answering.
+- If filtered search is weak or empty, retry with broader sourceSearch.
+- Use webSearch for fresh or external information, and readWebPage when a web result needs more detail. Web search should complement uploaded sources, not replace them.
 
-Use webSearch proactively when fresh or external information would genuinely help — recent context, references their sources wouldn't cover, things worth verifying. It's best as a complement to the user's sources rather than a replacement, and there's no need to search for the sake of searching.
-
-Write to be read quickly. Favor short paragraphs and clear markdown headings over long bulleted lists — a list is often a symptom of details that could be consolidated into a sentence or two. Aim for information density, not word count.
+Answering:
+- Prefer concise, direct answers with short paragraphs and clear markdown headings when useful.
+- If the uploaded sources do not contain enough evidence, say that clearly.
+- For source-specific questions, prioritize uploaded sources over general knowledge or web results.
+- Use the user's timezone for relative dates.
 
 Current date: ${localDate}
 User timezone: ${resolvedTimeZone}
 
-Use the user's timezone when interpreting relative dates like today, tomorrow, yesterday, this week, or next lecture.
-
-When citing a result returned by the sourceSearch tool, cite it in the same response with an explicit markdown link. Use the result's citationLabel as the visible link text and the result's exact citationId in the href. For example, if citationLabel is S1 and citationId is 11111111-1111-1111-1111-111111111111:chunk:3, write [S1](#citation-11111111-1111-1111-1111-111111111111:chunk:3). Attach a citation **only** when that chunk directly answers the user's question—you may summarize, aggregate, or reason from search results that are only indirectly relevant, without citing those parts. Place each citation immediately after the sentence or claim it supports (or after a quoted span if you use one)—not batched together at the end of a paragraph. You do not need to phrase supported information as a literal quotation. Do not write bare citation labels like S1; they will not render as citations. Never cite the same chunk twice in one assistant message, and never repeat the same citationId link anywhere in that message. Citing different chunks from the same underlying source is fine. Citation IDs are scoped to the current sourceSearch results, so call sourceSearch again before citing sources in a later response.`
+Citations:
+- Cite sourceSearch results with markdown links using citationLabel as the visible text and citationId in the href.
+- Example: [S1](#citation-11111111-1111-1111-1111-111111111111:chunk:3)
+- Keep citations minimal. For most focused answers, 1-2 citations is enough.
+- Using more than 2 citations can be a sign the answer is trying to cover too much. Use more only when the question truly requires several distinct facts from scattered parts of the sources.
+- Place each citation immediately after the claim it supports.
+- Cite only chunks that directly support the claim.
+- Do not cite search results that are only indirectly relevant.
+- Do not batch citations at the end.
+- Do not write bare labels like S1.
+- Do not cite the same citationId more than once in a single response.
+- Citation IDs are valid only for the current sourceSearch results; call sourceSearch again before citing in a later response.`
 }
 
 function calculateChatUsage(usage: LanguageModelUsage): ChatUsage {
@@ -138,7 +156,7 @@ export async function POST(req: Request) {
   await persistChat(id, validatedMessages)
 
   const result = streamText({
-    model: CHAT_MODEL_ID,
+    model: gateway(CHAT_MODEL_ID),
     providerOptions: {
       openai: {
         reasoningEffort: 'low',
@@ -154,30 +172,6 @@ export async function POST(req: Request) {
     abortSignal: req.signal,
   })
 
-  void (async () => {
-    try {
-      const usage = await result.usage
-      const inputTokens = usage.inputTokens ?? 0
-      const cacheReadTokens = usage.inputTokenDetails.cacheReadTokens ?? 0
-      const cacheWriteTokens = usage.inputTokenDetails.cacheWriteTokens ?? 0
-      const cacheReadRatio = inputTokens > 0 ? cacheReadTokens / inputTokens : 0
-
-      console.info('[chat usage]', {
-        chatId: id,
-        messageCount: messages.length,
-        inputTokens: usage.inputTokens,
-        outputTokens: usage.outputTokens,
-        totalTokens: usage.totalTokens,
-        cacheReadTokens,
-        cacheWriteTokens,
-        cacheReadRatio: Number(cacheReadRatio.toFixed(4)),
-        raw: usage.raw,
-      })
-    } catch (error) {
-      console.error('[chat usage] failed to read usage', error)
-    }
-  })()
-
   return result.toUIMessageStreamResponse({
     originalMessages: messages,
     generateMessageId: createIdGenerator({
@@ -191,7 +185,7 @@ export async function POST(req: Request) {
         // For now, maybe don't persist it as final history.
         return
       }
-      const usage = calculateChatUsage(await result.usage)
+      const usage = calculateChatUsage(await result.totalUsage)
       await persistChat(id, messages, usage)
     },
   })
