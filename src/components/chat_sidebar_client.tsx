@@ -10,6 +10,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { ChatSidebarItem } from '~/app/(app)/new_chat_form'
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '~/components/ui/sidebar'
+import { useChatGenerationStore } from '~/hooks/useChatGenerationStore'
 import { CHATS_KEY } from '~/lib/query_keys'
 import { getAllChats } from '~/server/actions/sources'
 
@@ -209,6 +210,8 @@ function ChatActions({ chat, onEdit, onDelete }: ChatActionsProps) {
 
   async function handleDelete(e: MouseEvent<HTMLButtonElement>) {
     e.stopPropagation()
+
+    useChatGenerationStore.getState().stop(chat.id)
 
     const previousChats = queryClient.getQueryData<ChatSidebarItem[]>([CHATS_KEY])
 

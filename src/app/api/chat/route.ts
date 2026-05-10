@@ -149,6 +149,7 @@ export async function POST(req: Request) {
     system: getSystemPrompt(timeZone, locale),
     messages: await convertToModelMessages(validatedMessages),
     stopWhen: stepCountIs(5),
+    abortSignal: req.signal,
   })
 
   void (async () => {

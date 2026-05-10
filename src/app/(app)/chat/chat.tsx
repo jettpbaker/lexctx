@@ -21,7 +21,8 @@ import { ChatComposer } from '~/components/chat/chat_composer'
 import { CitationChip, CitationChipPending } from '~/components/chat/citation_chip'
 import { ToolStatusRow } from '~/components/chat/tool_status_row'
 import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
-import { CHAT_USAGE_KEY, CHATS_KEY, CITATIONS_KEY } from '~/lib/query_keys'
+import { useChatGenerationStore } from '~/hooks/useChatGenerationStore'
+import { CHAT_USAGE_KEY, CITATIONS_KEY } from '~/lib/query_keys'
 import { getCitationHydrationByIds } from '~/server/actions/getCitationHydrationByIds'
 import { getChatUsageById } from '~/server/actions/sources'
 
@@ -46,7 +47,9 @@ export default function Chat({
 
   const chatUsage = chatUsageQuery.data
 
-  const { sendMessage, messages, status } = useChat({
+  const registerGeneration = useChatGenerationStore((state) => state.register)
+
+  const { sendMessage, messages, status, stop } = useChat({
     id,
     messages: initialMessages,
     transport: new DefaultChatTransport({
@@ -67,6 +70,12 @@ export default function Chat({
       router.refresh()
     },
   })
+
+  useEffect(() => {
+    if (status !== 'submitted' && status !== 'streaming') return
+
+    return registerGeneration(id, stop)
+  }, [id, registerGeneration, status, stop])
 
   useEffect(() => {
     if (hasAppendedQuery.current) return
@@ -195,6 +204,7 @@ export default function Chat({
           status={status}
           onChange={setText}
           onSubmit={handleSubmit}
+          onStop={stop}
           usage={chatUsage}
         />
       </div>
