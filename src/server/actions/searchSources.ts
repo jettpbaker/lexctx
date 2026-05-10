@@ -20,8 +20,16 @@ export type LectureChunkSearchResult = {
   score: number
 }
 
-export async function searchSources(query: string): Promise<LectureChunkSearchResult[]> {
-  const results = await hybridSearch(query)
+export type SourceSearchFilters = {
+  sourceIds?: string[]
+  collectionIds?: string[]
+}
+
+export async function searchSources(
+  query: string,
+  filters?: SourceSearchFilters
+): Promise<LectureChunkSearchResult[]> {
+  const results = await hybridSearch(query, filters)
 
   const typedResults = results.map((result, index) => ({
     id: result.id,

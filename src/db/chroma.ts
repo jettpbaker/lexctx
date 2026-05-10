@@ -78,6 +78,11 @@ type LectureChunkSourceMetadata = {
   collectionName: string
 }
 
+export type HybridSearchFilters = {
+  sourceIds?: string[]
+  collectionIds?: string[]
+}
+
 export async function upsertLectureChunks(
   metadata: LectureChunkSourceMetadata,
   chunks: RagChunk[]
@@ -120,8 +125,23 @@ function hybridRank(query: string) {
   return rank
 }
 
-function createSearch(query: string) {
-  return new Search()
+function createWhere(filters?: HybridSearchFilters) {
+  const sourceIds = filters?.sourceIds?.filter(Boolean) ?? []
+  const collectionIds = filters?.collectionIds?.filter(Boolean) ?? []
+
+  let where = sourceIds.length > 0 ? K('sourceId').isIn(sourceIds) : undefined
+
+  if (collectionIds.length > 0) {
+    const collectionWhere = K('collectionId').isIn(collectionIds)
+    where = where ? where.and(collectionWhere) : collectionWhere
+  }
+
+  return where
+}
+
+function createSearch(query: string, filters?: HybridSearchFilters) {
+  const where = createWhere(filters)
+  const search = new Search()
     .rank(hybridRank(query))
     .limit(10)
     .select(
@@ -135,12 +155,14 @@ function createSearch(query: string) {
       'startSeconds',
       'endSeconds'
     )
+
+  return where ? search.where(where) : search
 }
 
-export async function hybridSearch(query: string) {
+export async function hybridSearch(query: string, filters?: HybridSearchFilters) {
   const collection = await getLectureChunksCollection()
 
-  const search = createSearch(query)
+  const search = createSearch(query, filters)
   const results = await collection.search(search)
 
   const rows = results.rows()[0]
