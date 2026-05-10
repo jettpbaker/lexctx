@@ -112,9 +112,7 @@ export async function loadChat(id: string): Promise<{ exists: boolean; messages:
   }
 
   if (!chat.messagesGzipBase64) {
-    // TODO Handle this case
-    console.error('[loadChat] chat has no messagesGzipBase64', chat)
-    throw new Error('Chat has no messagesGzipBase64')
+    return { exists: true, messages: [] }
   }
 
   const messagesGzip = Buffer.from(chat.messagesGzipBase64, 'base64')
@@ -134,6 +132,8 @@ export async function POST(req: Request) {
   const validatedMessages = await validateUIMessages<LexMessage>({
     messages,
   })
+
+  await persistChat(id, validatedMessages)
 
   const result = streamText({
     model: CHAT_MODEL_ID,

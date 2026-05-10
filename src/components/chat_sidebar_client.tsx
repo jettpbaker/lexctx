@@ -6,7 +6,7 @@ import { Delete02Icon, Edit03Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { ChatSidebarItem } from '~/app/(app)/new_chat_form'
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '~/components/ui/sidebar'
@@ -186,7 +186,7 @@ function ChatSidebarRow({ chat, href, isActive, onEdit, onDelete }: ChatSidebarR
         )}
       </SidebarMenuButton>
       <div className='pointer-events-none absolute inset-y-0 right-0 z-10 flex translate-x-1 items-center justify-end gap-0.5 bg-sidebar-accent [mask-image:linear-gradient(to_right,transparent,black_1.75rem)] pr-1 pl-8 opacity-0 transition-[translate,opacity] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[translate,opacity] group-focus-within/menu-item:pointer-events-auto group-focus-within/menu-item:translate-x-0 group-focus-within/menu-item:opacity-100 group-hover/menu-item:pointer-events-auto group-hover/menu-item:translate-x-0 group-hover/menu-item:opacity-100 motion-reduce:translate-x-0 motion-reduce:transition-none'>
-        <ChatActions chat={chat} onEdit={startEditing} onDelete={onDelete} />
+        <ChatActions chat={chat} isActive={isActive} onEdit={startEditing} onDelete={onDelete} />
       </div>
     </SidebarMenuItem>
   )
@@ -194,11 +194,13 @@ function ChatSidebarRow({ chat, href, isActive, onEdit, onDelete }: ChatSidebarR
 
 type ChatActionsProps = {
   chat: ChatSidebarItem
+  isActive: boolean
   onEdit?: (chat: ChatSidebarItem) => void
   onDelete?: (chatId: string) => Promise<void>
 }
 
-function ChatActions({ chat, onEdit, onDelete }: ChatActionsProps) {
+function ChatActions({ chat, isActive, onEdit, onDelete }: ChatActionsProps) {
+  const router = useRouter()
   const queryClient = useQueryClient()
 
   function handleEdit(e: MouseEvent<HTMLButtonElement>) {
@@ -219,6 +221,10 @@ function ChatActions({ chat, onEdit, onDelete }: ChatActionsProps) {
       (current ?? []).filter((c) => c.id !== chat.id)
     )
 
+    if (isActive) {
+      router.replace('/')
+    }
+
     try {
       await onDelete?.(chat.id)
     } catch {
@@ -230,7 +236,7 @@ function ChatActions({ chat, onEdit, onDelete }: ChatActionsProps) {
 
   return (
     <div className='flex items-center gap-0.5 text-muted-foreground'>
-      <Tooltip>
+      <Tooltip disableHoverablePopup>
         <TooltipTrigger
           render={
             <Button
@@ -244,9 +250,9 @@ function ChatActions({ chat, onEdit, onDelete }: ChatActionsProps) {
             </Button>
           }
         />
-        <TooltipContent>Rename chat</TooltipContent>
+        <TooltipContent side='bottom'>Rename chat</TooltipContent>
       </Tooltip>
-      <Tooltip>
+      <Tooltip disableHoverablePopup>
         <TooltipTrigger
           render={
             <Button
@@ -260,7 +266,7 @@ function ChatActions({ chat, onEdit, onDelete }: ChatActionsProps) {
             </Button>
           }
         />
-        <TooltipContent>Delete chat</TooltipContent>
+        <TooltipContent side='bottom'>Delete chat</TooltipContent>
       </Tooltip>
     </div>
   )

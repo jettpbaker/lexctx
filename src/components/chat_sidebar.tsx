@@ -23,7 +23,7 @@ export default function ChatSidebar() {
     <Sidebar>
       <SidebarTrigger className='fixed top-2 left-2 z-50' />
 
-      <SidebarHeader className='p-2'>
+      <SidebarHeader className='mb-2 p-2'>
         <div className='h-7' aria-hidden />
         <Link
           href='/'

@@ -9,11 +9,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { DefaultChatTransport, getToolName, isToolUIPart, UIMessage } from 'ai'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  Conversation,
-  ConversationContent,
-  ConversationEmptyState,
-} from '~/components/ai-elements/conversation'
+import { Conversation, ConversationContent } from '~/components/ai-elements/conversation'
 import { Message, MessageContent, MessageResponse } from '~/components/ai-elements/message'
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '~/components/ai-elements/reasoning'
 import { Shimmer } from '~/components/ai-elements/shimmer'
@@ -65,7 +61,9 @@ export default function Chat({
         }
       },
     }),
-    onFinish() {
+    onFinish({ isAbort }) {
+      if (isAbort) return
+
       queryClient.invalidateQueries({ queryKey: [CHAT_USAGE_KEY, id] })
       router.refresh()
     },
@@ -147,12 +145,6 @@ export default function Chat({
     <div className='relative flex h-dvh min-h-0 w-full flex-1 flex-col overflow-hidden pt-[36px]'>
       <Conversation>
         <ConversationContent>
-          {messages.length === 0 && (
-            <ConversationEmptyState
-              title='Start a conversation'
-              description='Type a message below to begin chatting'
-            />
-          )}
           {messages.length > 0 &&
             messages.map((message, index) => {
               const isLastMessage = index === messages.length - 1
