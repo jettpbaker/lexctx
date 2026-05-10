@@ -22,6 +22,7 @@ type ChatComposerProps = {
   placeholder?: string
   onChange: (value: string) => void
   onSubmit: (value: string) => void
+  onStop?: () => void
 }
 
 export function ChatComposer({
@@ -33,11 +34,13 @@ export function ChatComposer({
   displayUsage = true,
   onChange,
   onSubmit,
+  onStop,
 }: ChatComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [isComposing, setIsComposing] = useState(false)
   const [hasMultipleInputLines, setHasMultipleInputLines] = useState(false)
   const isBusy = isSubmitPending || status === 'submitted' || status === 'streaming'
+  const canStop = status === 'submitted' || status === 'streaming'
   const canSubmit = value.trim().length > 0 && !isBusy
   const isEmpty = value.trim() === ''
   const multipleInputLines = !isEmpty && hasMultipleInputLines
@@ -121,13 +124,12 @@ export function ChatComposer({
           />
 
           {!multipleInputLines && (
-            <Button size='icon' disabled={!canSubmit} type='submit' className='rounded-full'>
-              {isSubmitPending ? (
-                <Spinner className='size-4.5' />
-              ) : (
-                <HugeiconsIcon icon={ArrowUp02Icon} strokeWidth={2} className='size-4.5' />
-              )}
-            </Button>
+            <ComposerActionButton
+              canSubmit={canSubmit}
+              canStop={canStop}
+              isSubmitPending={isSubmitPending}
+              onStop={onStop}
+            />
           )}
 
           {multipleInputLines && (
@@ -136,13 +138,12 @@ export function ChatComposer({
                 <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className='size-4.5' />
               </Button>
 
-              <Button size='icon' disabled={!canSubmit} type='submit' className='rounded-full'>
-                {isSubmitPending ? (
-                  <Spinner className='size-4.5' />
-                ) : (
-                  <HugeiconsIcon icon={ArrowUp02Icon} strokeWidth={2} className='size-4.5' />
-                )}
-              </Button>
+              <ComposerActionButton
+                canSubmit={canSubmit}
+                canStop={canStop}
+                isSubmitPending={isSubmitPending}
+                onStop={onStop}
+              />
             </div>
           )}
         </div>
@@ -173,6 +174,42 @@ export function ChatComposer({
         )}
       </div>
     </div>
+  )
+}
+
+function ComposerActionButton({
+  canSubmit,
+  canStop,
+  isSubmitPending,
+  onStop,
+}: {
+  canSubmit: boolean
+  canStop: boolean
+  isSubmitPending: boolean
+  onStop?: () => void
+}) {
+  if (canStop) {
+    return (
+      <Button
+        size='icon'
+        type='button'
+        className='rounded-full'
+        aria-label='Stop response'
+        onClick={onStop}
+      >
+        <span className='size-3 rounded-[2px] bg-current' aria-hidden />
+      </Button>
+    )
+  }
+
+  return (
+    <Button size='icon' disabled={!canSubmit} type='submit' className='rounded-full'>
+      {isSubmitPending ? (
+        <Spinner className='size-4.5' />
+      ) : (
+        <HugeiconsIcon icon={ArrowUp02Icon} strokeWidth={2} className='size-4.5' />
+      )}
+    </Button>
   )
 }
 

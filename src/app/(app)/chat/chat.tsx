@@ -9,11 +9,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { DefaultChatTransport, getToolName, isToolUIPart, UIMessage } from 'ai'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  Conversation,
-  ConversationContent,
-  ConversationEmptyState,
-} from '~/components/ai-elements/conversation'
+import { Conversation, ConversationContent } from '~/components/ai-elements/conversation'
 import { Message, MessageContent, MessageResponse } from '~/components/ai-elements/message'
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '~/components/ai-elements/reasoning'
 import { Shimmer } from '~/components/ai-elements/shimmer'
@@ -21,6 +17,7 @@ import { ChatComposer } from '~/components/chat/chat_composer'
 import { CitationChip, CitationChipPending } from '~/components/chat/citation_chip'
 import { ToolStatusRow } from '~/components/chat/tool_status_row'
 import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
+import { useChatGenerationStore } from '~/hooks/useChatGenerationStore'
 import { CHAT_USAGE_KEY, CITATIONS_KEY } from '~/lib/query_keys'
 import { getCitationHydrationByIds } from '~/server/actions/getCitationHydrationByIds'
 import { getChatUsageById } from '~/server/actions/sources'
@@ -46,7 +43,9 @@ export default function Chat({
 
   const chatUsage = chatUsageQuery.data
 
-  const { sendMessage, messages, status } = useChat({
+  const registerGeneration = useChatGenerationStore((state) => state.register)
+
+  const { sendMessage, messages, status, stop } = useChat({
     id,
     messages: initialMessages,
     transport: new DefaultChatTransport({
@@ -62,11 +61,19 @@ export default function Chat({
         }
       },
     }),
-    onFinish() {
+    onFinish({ isAbort }) {
+      if (isAbort) return
+
       queryClient.invalidateQueries({ queryKey: [CHAT_USAGE_KEY, id] })
       router.refresh()
     },
   })
+
+  useEffect(() => {
+    if (status !== 'submitted' && status !== 'streaming') return
+
+    return registerGeneration(id, stop)
+  }, [id, registerGeneration, status, stop])
 
   useEffect(() => {
     if (hasAppendedQuery.current) return
@@ -138,12 +145,6 @@ export default function Chat({
     <div className='relative flex h-dvh min-h-0 w-full flex-1 flex-col overflow-hidden pt-[36px]'>
       <Conversation>
         <ConversationContent>
-          {messages.length === 0 && (
-            <ConversationEmptyState
-              title='Start a conversation'
-              description='Type a message below to begin chatting'
-            />
-          )}
           {messages.length > 0 &&
             messages.map((message, index) => {
               const isLastMessage = index === messages.length - 1
@@ -195,6 +196,7 @@ export default function Chat({
           status={status}
           onChange={setText}
           onSubmit={handleSubmit}
+          onStop={stop}
           usage={chatUsage}
         />
       </div>

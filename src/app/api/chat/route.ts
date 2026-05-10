@@ -111,6 +111,10 @@ export async function loadChat(id: string): Promise<{ exists: boolean; messages:
     return { exists: false, messages: [] }
   }
 
+  if (!chat.messagesGzipBase64) {
+    return { exists: true, messages: [] }
+  }
+
   const messagesGzip = Buffer.from(chat.messagesGzipBase64, 'base64')
   const messagesString = await gunzipAsync(messagesGzip)
   const messages = JSON.parse(messagesString)
@@ -129,6 +133,8 @@ export async function POST(req: Request) {
     messages,
   })
 
+  await persistChat(id, validatedMessages)
+
   const result = streamText({
     model: CHAT_MODEL_ID,
     providerOptions: {
@@ -143,6 +149,7 @@ export async function POST(req: Request) {
     system: getSystemPrompt(timeZone, locale),
     messages: await convertToModelMessages(validatedMessages),
     stopWhen: stepCountIs(5),
+    abortSignal: req.signal,
   })
 
   void (async () => {

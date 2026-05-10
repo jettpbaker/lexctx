@@ -2,6 +2,7 @@ import { Add01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import Link from 'next/link'
 import { Suspense } from 'react'
+import { ChatSidebarItem } from '~/app/(app)/new_chat_form'
 import { buttonVariants } from '~/components/ui/button'
 import {
   Sidebar,
@@ -13,7 +14,7 @@ import {
 } from '~/components/ui/sidebar'
 import { Spinner } from '~/components/ui/spinner'
 import { cn } from '~/lib/utils'
-import { getAllChats } from '~/server/actions/sources'
+import { getAllChats, upsertChatTitle, deleteChatById } from '~/server/actions/sources'
 
 import ChatSidebarClient from './chat_sidebar_client'
 
@@ -22,7 +23,7 @@ export default function ChatSidebar() {
     <Sidebar>
       <SidebarTrigger className='fixed top-2 left-2 z-50' />
 
-      <SidebarHeader className='p-2'>
+      <SidebarHeader className='mb-2 p-2'>
         <div className='h-7' aria-hidden />
         <Link
           href='/'
@@ -64,7 +65,24 @@ export default function ChatSidebar() {
 async function ChatSidebarData() {
   const initialChats = await getAllChats()
 
-  return <ChatSidebarClient initialChats={initialChats} />
+  async function renameChat(chatId: string, title: string) {
+    'use server'
+
+    await upsertChatTitle(chatId, title)
+  }
+
+  async function deleteChat(chatId: string) {
+    'use server'
+
+    await deleteChatById(chatId)
+  }
+
+  const chats = initialChats.map<ChatSidebarItem>((chat) => ({
+    ...chat,
+    titleLoading: false,
+  }))
+
+  return <ChatSidebarClient initialChats={chats} onEdit={renameChat} onDelete={deleteChat} />
 }
 
 function ChatSidebarLoading() {

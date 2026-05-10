@@ -15,6 +15,10 @@ async function loadChat(id: string): Promise<{ messages: LexMessage[] } | null> 
     return null
   }
 
+  if (!chat.messagesGzipBase64) {
+    return { messages: [] }
+  }
+
   const messagesGzip = Buffer.from(chat.messagesGzipBase64, 'base64')
   const messagesString = await gunzipAsync(messagesGzip)
   const messages = JSON.parse(messagesString)
