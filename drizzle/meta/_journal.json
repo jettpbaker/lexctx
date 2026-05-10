@@ -169,6 +169,13 @@
       "when": 1778392834936,
       "tag": "0023_aromatic_nico_minoru",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1778410571684,
+      "tag": "0024_sharp_steel_serpent",
+      "breakpoints": true
     }
   ]
 }

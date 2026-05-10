@@ -51,6 +51,7 @@ export const sources = p.pgTable(
     muxBlurAspectRatio: p.doublePrecision('mux_blur_aspect_ratio'),
     falRequestId: p.text('fal_request_id'),
     transcriptText: p.text('transcript_text'),
+    summary: p.text('summary'),
     error: p.text('error'),
     createdAt: p.timestamp('created_at').notNull().defaultNow(),
     updatedAt: p

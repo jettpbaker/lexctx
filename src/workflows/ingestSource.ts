@@ -1,4 +1,5 @@
 import { fal } from '@fal-ai/client'
+import { generateText } from 'ai'
 import { sleep } from 'workflow'
 import { upsertLectureChunks } from '~/db/chroma'
 import {
@@ -18,6 +19,7 @@ import {
   markSourceFailed,
   markSourceReady,
   saveFalRequestId,
+  saveSourceSummary,
   saveSourceTranscript,
 } from '~/server/actions/sources'
 
@@ -81,6 +83,7 @@ export async function ingestSource(id: string, url: string, key: string) {
   )
 
   await persistSourceTranscript(id, transcript.data.text, transcriptSegments)
+  const summaryPromise = generateAndPersistSourceSummary(id, transcript.data.text)
 
   try {
     await deleteSourceAudioFile(id, key)
@@ -94,6 +97,7 @@ export async function ingestSource(id: string, url: string, key: string) {
   const sourceMetadata = await loadSourceIndexMetadata(id)
   await indexRagChunks(sourceMetadata, chunks)
 
+  await summaryPromise
   await persistSourceReady(id)
 }
 
@@ -130,6 +134,21 @@ async function persistFalRequestId(sourceId: string, requestId: string) {
   'use step'
 
   await saveFalRequestId(sourceId, requestId)
+}
+
+async function generateAndPersistSourceSummary(sourceId: string, transcriptText: string) {
+  'use step'
+
+  try {
+    const response = await generateText({
+      model: 'google/gemini-3.1-flash-lite',
+      prompt: `Write a concise, factual 3-4 sentence summary of this source transcript. Use plain text only. Do not use markdown, headings, bullets, or introductory phrases. Do not speculate beyond the transcript.\n\nTranscript:\n${transcriptText}`,
+    })
+
+    await saveSourceSummary(sourceId, response.text.trim())
+  } catch (error) {
+    console.error('Error generating source summary: ', error)
+  }
 }
 
 async function getTranscriptionStatus(requestId: string) {
