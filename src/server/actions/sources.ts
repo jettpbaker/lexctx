@@ -354,6 +354,10 @@ export async function getChatById(chatId: string) {
   return await db.select().from(chats).where(eq(chats.id, chatId)).limit(1)
 }
 
+export async function deleteChatById(chatId: string) {
+  await db.delete(chats).where(eq(chats.id, chatId))
+}
+
 export async function upsertRagChunks(sourceId: string, chunks: RagChunk[]) {
   await db.delete(ragChunks).where(eq(ragChunks.sourceId, sourceId))
   await db.insert(ragChunks).values(

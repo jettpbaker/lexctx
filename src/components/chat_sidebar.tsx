@@ -14,7 +14,7 @@ import {
 } from '~/components/ui/sidebar'
 import { Spinner } from '~/components/ui/spinner'
 import { cn } from '~/lib/utils'
-import { getAllChats } from '~/server/actions/sources'
+import { getAllChats, upsertChatTitle, deleteChatById } from '~/server/actions/sources'
 
 import ChatSidebarClient from './chat_sidebar_client'
 
@@ -65,12 +65,24 @@ export default function ChatSidebar() {
 async function ChatSidebarData() {
   const initialChats = await getAllChats()
 
+  async function renameChat(chatId: string, title: string) {
+    'use server'
+
+    await upsertChatTitle(chatId, title)
+  }
+
+  async function deleteChat(chatId: string) {
+    'use server'
+
+    await deleteChatById(chatId)
+  }
+
   const chats = initialChats.map<ChatSidebarItem>((chat) => ({
     ...chat,
     titleLoading: false,
   }))
 
-  return <ChatSidebarClient initialChats={chats} />
+  return <ChatSidebarClient initialChats={chats} onEdit={renameChat} onDelete={deleteChat} />
 }
 
 function ChatSidebarLoading() {

@@ -239,7 +239,7 @@ function SourceActions({ source, onEdit, deleteTrigger }: SourceActionsProps) {
             </Button>
           }
         />
-        <TooltipContent>Edit source</TooltipContent>
+        <TooltipContent>Rename source</TooltipContent>
       </Tooltip>
       {deleteTrigger}
     </div>
