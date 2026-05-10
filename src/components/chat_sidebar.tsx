@@ -2,6 +2,7 @@ import { Add01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import Link from 'next/link'
 import { Suspense } from 'react'
+import { ChatSidebarItem } from '~/app/(app)/new_chat_form'
 import { buttonVariants } from '~/components/ui/button'
 import {
   Sidebar,
@@ -64,7 +65,12 @@ export default function ChatSidebar() {
 async function ChatSidebarData() {
   const initialChats = await getAllChats()
 
-  return <ChatSidebarClient initialChats={initialChats} />
+  const chats = initialChats.map<ChatSidebarItem>((chat) => ({
+    ...chat,
+    titleLoading: false,
+  }))
+
+  return <ChatSidebarClient initialChats={chats} />
 }
 
 function ChatSidebarLoading() {

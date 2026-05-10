@@ -3,11 +3,10 @@ import type { chatTools } from '~/server/ai/tools'
 import {
   AiSearch02Icon,
   BookOpen01Icon,
+  BookOpen02Icon,
   Globe02Icon,
-  Idea01Icon,
   Search01Icon,
   SearchList02Icon,
-  WebDesign01Icon,
 } from '@hugeicons/core-free-icons'
 
 export type ToolName = keyof typeof chatTools
@@ -27,7 +26,7 @@ export const toolUiMapping = {
     completedText: 'Searched sources',
   },
   getNearbyRagChunks: {
-    icon: Idea01Icon,
+    icon: BookOpen02Icon,
     text: 'Ingesting nearby context',
     completedText: 'Ingested nearby context',
   },

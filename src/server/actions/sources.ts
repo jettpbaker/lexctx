@@ -343,6 +343,13 @@ export async function upsertChat(
     })
 }
 
+export async function upsertChatTitle(chatId: string, title: string) {
+  await db.insert(chats).values({ id: chatId, title }).onConflictDoUpdate({
+    target: chats.id,
+    set: { title },
+  })
+}
+
 export async function getChatById(chatId: string) {
   return await db.select().from(chats).where(eq(chats.id, chatId)).limit(1)
 }

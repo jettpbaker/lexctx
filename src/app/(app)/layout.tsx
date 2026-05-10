@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import ChatSidebar from '~/components/chat_sidebar'
 import CollectionsSidebar from '~/components/collections_sidebar'
-import { SidebarProvider, SidebarTrigger } from '~/components/ui/sidebar'
+import { SidebarProvider } from '~/components/ui/sidebar'
 import { defaultOpenFromSidebarCookie, SIDEBAR_STATE_COOKIE_NAME } from '~/lib/sidebar_state_cookie'
 
 export const dynamic = 'force-dynamic'
@@ -12,10 +12,12 @@ export default async function AppShellLayout({ children }: { children: React.Rea
   const defaultOpen = defaultOpenFromSidebarCookie(sidebarCookie)
 
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
+    <SidebarProvider
+      defaultOpen={defaultOpen}
+      style={{ '--sidebar-width': '14rem' } as React.CSSProperties}
+    >
       <ChatSidebar />
       <main className='relative flex h-dvh w-full min-w-0 flex-1 flex-col bg-background'>
-        {/* <main className='bg-background'> */}
         {children}
       </main>
       <CollectionsSidebar />

@@ -21,7 +21,7 @@ import { ChatComposer } from '~/components/chat/chat_composer'
 import { CitationChip, CitationChipPending } from '~/components/chat/citation_chip'
 import { ToolStatusRow } from '~/components/chat/tool_status_row'
 import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
-import { CHAT_USAGE_KEY, CITATIONS_KEY } from '~/lib/query_keys'
+import { CHAT_USAGE_KEY, CHATS_KEY, CITATIONS_KEY } from '~/lib/query_keys'
 import { getCitationHydrationByIds } from '~/server/actions/getCitationHydrationByIds'
 import { getChatUsageById } from '~/server/actions/sources'
 
