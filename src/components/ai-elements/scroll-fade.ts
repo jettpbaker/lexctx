@@ -56,8 +56,6 @@ export function buildScrollFadeMask({
 }: ScrollEdges & { topPx: number; bottomPx: number }): string | undefined {
   if (atTop && atBottom) return undefined
   const top = atTop ? 'black 0' : `transparent 0, black ${topPx}px`
-  const bottom = atBottom
-    ? 'black 100%'
-    : `black calc(100% - ${bottomPx}px), transparent 100%`
+  const bottom = atBottom ? 'black 100%' : `black calc(100% - ${bottomPx}px), transparent 100%`
   return `linear-gradient(to bottom, ${top}, ${bottom})`
 }

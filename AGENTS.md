@@ -21,17 +21,17 @@
 
 All commands via `bun run <script>` (see `package.json`):
 
-| Command | Purpose |
-|---------|---------|
-| `bun dev` | Start dev server (Turbopack) on port 3000 |
-| `bun run lint` | Lint with oxlint |
-| `bun run lint:fix` | Lint and auto-fix |
-| `bun run format` | Format with oxfmt |
-| `bun run format:check` | Check formatting |
-| `bun run typecheck` | TypeScript type checking (`tsc --noEmit`) |
-| `bun run build` | Production build |
-| `bun run db:push` | Push Drizzle schema to DB |
-| `bun run db:migrate` | Run migrations |
+| Command                | Purpose                                   |
+| ---------------------- | ----------------------------------------- |
+| `bun dev`              | Start dev server (Turbopack) on port 3000 |
+| `bun run lint`         | Lint with oxlint                          |
+| `bun run lint:fix`     | Lint and auto-fix                         |
+| `bun run format`       | Format with oxfmt                         |
+| `bun run format:check` | Check formatting                          |
+| `bun run typecheck`    | TypeScript type checking (`tsc --noEmit`) |
+| `bun run build`        | Production build                          |
+| `bun run db:push`      | Push Drizzle schema to DB                 |
+| `bun run db:migrate`   | Run migrations                            |
 
 ### Environment Variables
 

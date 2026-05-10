@@ -1,6 +1,7 @@
 import type { CollectionGroupCollection } from '~/components/sources/collection_group'
 import type { SourceRowSource } from '~/components/sources/source_row'
 import type { SourceUiStatus, VideoUiStatus } from '~/lib/source_status'
+import type { HydratedCitation } from '~/server/actions/getCitationHydrationByIds'
 
 const now = new Date()
 const minutesAgo = (n: number) => new Date(now.getTime() - n * 60_000)
@@ -526,5 +527,56 @@ export const COLLECTIONS_GALLERY: CollectionGroupCollection[] = [
         status: { kind: 'queued' },
       }),
     ],
+  },
+]
+
+function citation(
+  input: Partial<HydratedCitation> & { videoStatus: HydratedCitation['videoStatus'] }
+): HydratedCitation {
+  const videoStatus = input.videoStatus
+  return {
+    citationId: input.citationId ?? `mock-source:chunk:${input.chunkIndex ?? 0}`,
+    sourceId: input.sourceId ?? 'mock-source',
+    sourceName: input.sourceName ?? 'Lecture_03_compilers.mp4',
+    collectionId: input.collectionId ?? 'mock-collection',
+    collectionName: input.collectionName ?? 'CS50',
+    chunkIndex: input.chunkIndex ?? 0,
+    startSeconds: input.startSeconds ?? 0,
+    endSeconds: input.endSeconds ?? 30,
+    muxPlaybackId: input.muxPlaybackId ?? (videoStatus === 'ready' ? 'mock-playback-id' : null),
+    muxBlurDataUrl: input.muxBlurDataUrl ?? null,
+    muxBlurAspectRatio: input.muxBlurAspectRatio ?? null,
+    videoStatus,
+  }
+}
+
+export const CITATION_CHIP_GALLERY: { label: string; citation: HydratedCitation | null }[] = [
+  { label: 'Pending hydration (skeleton)', citation: null },
+  {
+    label: 'Ready (playable)',
+    citation: citation({ videoStatus: 'ready', sourceName: 'cs50-10m-aac.mp4' }),
+  },
+  {
+    label: 'Ready, very long source name',
+    citation: citation({
+      videoStatus: 'ready',
+      sourceName: 'really_long_lecture_title_about_binary_and_compilers.mp4',
+    }),
+  },
+  {
+    label: 'Processing',
+    citation: citation({ videoStatus: 'processing', sourceName: 'lecture_05_recursion.mp4' }),
+  },
+  {
+    label: 'Uploading',
+    citation: citation({ videoStatus: 'uploading', sourceName: 'lecture_06_arrays.mp4' }),
+  },
+  {
+    label: 'Pending upload',
+    citation: citation({ videoStatus: 'pending_upload', sourceName: 'lecture_07_strings.mp4' }),
+  },
+  {
+    label: 'Failed',
+    citation: citation({ videoStatus: 'failed', sourceName: 'lecture_08_memory.mp4' }),
   },
 ]

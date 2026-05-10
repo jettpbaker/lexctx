@@ -2,7 +2,7 @@
 
 import type { SearchResultRow } from 'chromadb'
 
-import { useEffect, useState, type SubmitEvent } from 'react'
+import { useState, type SubmitEvent } from 'react'
 import { searchSources } from '~/server/actions/searchSources'
 
 export default function SearchPage() {
@@ -21,10 +21,6 @@ export default function SearchPage() {
     const results = await searchSources(query)
     setSearchResults(results)
   }
-
-  useEffect(() => {
-    console.log(searchResults)
-  }, [searchResults])
 
   return (
     <div className='flex h-full w-full flex-col items-center justify-center p-8'>

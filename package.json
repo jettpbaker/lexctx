@@ -26,6 +26,7 @@
     "@fal-ai/client": "^1.9.6",
     "@hugeicons/core-free-icons": "^4.1.1",
     "@hugeicons/react": "^1.1.6",
+    "@mux/blurup": "^1.0.2",
     "@mux/mux-node": "^14.0.1",
     "@mux/mux-player-react": "^3.13.0",
     "@mux/upchunk": "^3.5.0",

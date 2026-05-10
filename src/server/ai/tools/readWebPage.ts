@@ -1,4 +1,5 @@
 import z from 'zod'
+
 import { getExaClient } from './exa'
 
 const MAX_PAGE_CHARACTERS = 15000

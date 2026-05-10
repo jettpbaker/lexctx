@@ -16,7 +16,7 @@ import { Separator } from '~/components/ui/separator'
 import { useSourceStore } from '~/hooks/useStore'
 import tickPipeline from '~/lib/localPipeline/tickPipeline'
 import { abortVideoUpload } from '~/lib/localPipeline/videoUploadRegistry'
-import { COLLECTIONS_WITH_SOURCES_KEY } from '~/lib/query_keys'
+import { CITATIONS_KEY, COLLECTIONS_WITH_SOURCES_KEY } from '~/lib/query_keys'
 import {
   dbStatusToSourceUiStatus,
   isInFlight,
@@ -220,6 +220,9 @@ export default function CollectionsSidebarClient({
 
       queryClient.setQueryData<CollectionsWithSources>(queryKey, context?.previousCollections)
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [CITATIONS_KEY] })
+    },
     onSettled: () => {
       const queryKey = [COLLECTIONS_WITH_SOURCES_KEY]
       queryClient.invalidateQueries({ queryKey })
@@ -254,6 +257,9 @@ export default function CollectionsSidebarClient({
       const queryKey = [COLLECTIONS_WITH_SOURCES_KEY]
 
       queryClient.setQueryData<CollectionsWithSources>(queryKey, context?.previousCollections)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [CITATIONS_KEY] })
     },
     onSettled: () => {
       const queryKey = [COLLECTIONS_WITH_SOURCES_KEY]
@@ -466,6 +472,6 @@ function sourceRowFromLocalSource(source: LocalSourceType): SourceRowSource {
 
 function shouldPollCollections(collections: CollectionGroupCollection[]): boolean {
   return collections.some((collection) =>
-    collection.sources.some((source) => isInFlight(source.status))
+    collection.sources.some((source) => isInFlight(source.status, source.videoStatus))
   )
 }

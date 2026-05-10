@@ -226,12 +226,8 @@
           "name": "sources_collection_id_collections_id_fk",
           "tableFrom": "sources",
           "tableTo": "collections",
-          "columnsFrom": [
-            "collection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["collection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -241,11 +237,7 @@
         "sources_content_hash_unique": {
           "name": "sources_content_hash_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "content_hash",
-            "content_hash_type",
-            "file_size"
-          ]
+          "columns": ["content_hash", "content_hash_type", "file_size"]
         }
       },
       "policies": {},
@@ -323,12 +315,8 @@
           "name": "transcript_segments_source_id_sources_id_fk",
           "tableFrom": "transcript_segments",
           "tableTo": "sources",
-          "columnsFrom": [
-            "source_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["source_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -338,10 +326,7 @@
         "transcript_segments_source_id_index_unique": {
           "name": "transcript_segments_source_id_index_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "source_id",
-            "index"
-          ]
+          "columns": ["source_id", "index"]
         }
       },
       "policies": {},
@@ -353,22 +338,12 @@
     "public.source_status": {
       "name": "source_status",
       "schema": "public",
-      "values": [
-        "pending_upload",
-        "transcribing",
-        "indexing",
-        "ready",
-        "failed"
-      ]
+      "values": ["pending_upload", "transcribing", "indexing", "ready", "failed"]
     },
     "public.video_status": {
       "name": "video_status",
       "schema": "public",
-      "values": [
-        "processing",
-        "ready",
-        "failed"
-      ]
+      "values": ["processing", "ready", "failed"]
     }
   },
   "schemas": {},

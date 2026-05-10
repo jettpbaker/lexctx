@@ -1,3 +1,4 @@
+import { createBlurUp } from '@mux/blurup'
 import Mux from '@mux/mux-node'
 import { sleep } from 'workflow'
 import { env } from '~/env'
@@ -5,6 +6,7 @@ import { MUX_POLL_INTERVAL, MAX_MUX_POLLS } from '~/lib/constants'
 import {
   markSourceVideoFailed,
   markSourceVideoReady,
+  saveMuxBlurUpPlaceholder,
   saveMuxAssetId,
 } from '~/server/actions/sources'
 
@@ -60,6 +62,7 @@ export async function pollMuxFinishedProcessing(sourceId: string, muxUploadId: s
         }
 
         await persistVideoReady(sourceId, uploadAssetId, playbackId)
+        await persistBlurUpPlaceholder(sourceId, playbackId, asset.duration)
         return
       }
     }
@@ -103,6 +106,36 @@ async function persistVideoReady(sourceId: string, muxAssetId: string, muxPlayba
 
   console.log('[mux processing poll] video ready', { sourceId, muxAssetId, muxPlaybackId })
   await markSourceVideoReady(sourceId, muxAssetId, muxPlaybackId)
+}
+
+async function persistBlurUpPlaceholder(
+  sourceId: string,
+  muxPlaybackId: string,
+  durationSeconds: number | null | undefined
+) {
+  'use step'
+
+  try {
+    const time = getBlurUpTimestamp(durationSeconds)
+    const { blurDataURL, aspectRatio } = await createBlurUp(muxPlaybackId, { time, type: 'webp' })
+
+    console.log('[mux processing poll] saving blur-up placeholder', {
+      sourceId,
+      muxPlaybackId,
+      time,
+      aspectRatio,
+    })
+    await saveMuxBlurUpPlaceholder(sourceId, blurDataURL, aspectRatio)
+  } catch (error) {
+    console.error('[mux processing poll] blur-up placeholder failed', { sourceId, error })
+  }
+}
+
+function getBlurUpTimestamp(durationSeconds: number | null | undefined) {
+  if (!durationSeconds || durationSeconds <= 0) return 1
+  if (durationSeconds < 2) return Math.max(0, durationSeconds / 2)
+
+  return Math.min(Math.max(durationSeconds * 0.2, 1), durationSeconds - 1)
 }
 
 async function persistVideoFailed(sourceId: string, error: string) {

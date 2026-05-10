@@ -1,5 +1,4 @@
 import { HugeiconsIcon } from '@hugeicons/react'
-
 import { Shimmer } from '~/components/ai-elements/shimmer'
 import { getToolUiMapping } from '~/components/chat/toolUiMapping'
 

@@ -1,6 +1,6 @@
 'use server'
 
-import { asc, desc, eq, and, gte, lte, sql, inArray } from 'drizzle-orm'
+import { asc, desc, eq, and, gte, lte, sql, inArray, or } from 'drizzle-orm'
 import { unstable_noStore as noStore } from 'next/cache'
 import db from '~/db'
 import { chats, collections, ragChunks, sources, transcriptSegments } from '~/db/schema'
@@ -214,6 +214,20 @@ export async function markSourceVideoReady(sourceId: string, assetId: string, pl
     .where(eq(sources.id, sourceId))
 }
 
+export async function saveMuxBlurUpPlaceholder(
+  sourceId: string,
+  blurDataUrl: string,
+  aspectRatio: number
+) {
+  await db
+    .update(sources)
+    .set({
+      muxBlurDataUrl: blurDataUrl,
+      muxBlurAspectRatio: aspectRatio,
+    })
+    .where(eq(sources.id, sourceId))
+}
+
 export async function markSourceVideoFailed(sourceId: string, error: string) {
   await db
     .update(sources)
@@ -416,4 +430,40 @@ export async function getSourceVideoDataByIds(sourceIds: string[]) {
     })
     .from(sources)
     .where(inArray(sources.id, sourceIds))
+}
+
+export type CitationLookup = {
+  sourceId: string
+  chunkIndex: number
+}
+
+export async function getCitationHydrationRowsByLookups(lookups: CitationLookup[]) {
+  if (lookups.length === 0) return []
+
+  const whereClause = or(
+    ...lookups.map((lookup) =>
+      and(eq(ragChunks.sourceId, lookup.sourceId), eq(ragChunks.chunkIndex, lookup.chunkIndex))
+    )
+  )
+
+  if (!whereClause) return []
+
+  return await db
+    .select({
+      sourceId: sources.id,
+      sourceName: sources.name,
+      collectionId: collections.id,
+      collectionName: collections.name,
+      chunkIndex: ragChunks.chunkIndex,
+      startSeconds: ragChunks.startSeconds,
+      endSeconds: ragChunks.endSeconds,
+      muxPlaybackId: sources.muxPlaybackId,
+      muxBlurDataUrl: sources.muxBlurDataUrl,
+      muxBlurAspectRatio: sources.muxBlurAspectRatio,
+      videoStatus: sources.videoStatus,
+    })
+    .from(ragChunks)
+    .innerJoin(sources, eq(ragChunks.sourceId, sources.id))
+    .innerJoin(collections, eq(sources.collectionId, collections.id))
+    .where(whereClause)
 }
