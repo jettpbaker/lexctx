@@ -10,6 +10,6 @@ export async function generateChatTitle(chatId: string, message: string) {
     prompt: `Generate a concise title in plain text (no markdown, no html) for the following chat message: "${message}"`,
   })
 
-  void upsertChatTitle(chatId, response.text)
+  await upsertChatTitle(chatId, response.text)
   return response.text
 }
