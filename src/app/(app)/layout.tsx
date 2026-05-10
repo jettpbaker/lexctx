@@ -12,10 +12,7 @@ export default async function AppShellLayout({ children }: { children: React.Rea
   const defaultOpen = defaultOpenFromSidebarCookie(sidebarCookie)
 
   return (
-    <SidebarProvider
-      defaultOpen={defaultOpen}
-      style={{ '--sidebar-width': '14rem' } as React.CSSProperties}
-    >
+    <SidebarProvider defaultOpen={defaultOpen}>
       <ChatSidebar />
       <main className='relative flex h-dvh w-full min-w-0 flex-1 flex-col bg-background'>
         {children}

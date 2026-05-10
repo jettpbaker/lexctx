@@ -9,8 +9,8 @@ export const MAX_MUX_POLLS = 90
 export const MUX_DELETE_CLEANUP_POLL_INTERVAL = '20 seconds'
 export const MAX_MUX_DELETE_CLEANUP_POLLS = 15
 
-export const TARGET_RAG_CHUNK_WORDS = 450
-export const MAX_RAG_CHUNK_WORDS = 600
-export const RAG_CHUNK_OVERLAP_WORDS = 100
+export const TARGET_RAG_CHUNK_WORDS = 350
+export const MAX_RAG_CHUNK_WORDS = 500
+export const RAG_CHUNK_OVERLAP_WORDS = 75
 
 export const CONTENT_HASH_TYPE = 'xxhash64'

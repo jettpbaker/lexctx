@@ -51,6 +51,7 @@ export async function listSourcesForCollection(collectionId: string) {
       collectionId: sources.collectionId,
       collectionName: collections.name,
       status: sources.status,
+      summary: sources.summary,
       createdAt: sources.createdAt,
       updatedAt: sources.updatedAt,
     })
@@ -68,6 +69,7 @@ export async function listAllSources() {
       collectionId: sources.collectionId,
       collectionName: collections.name,
       status: sources.status,
+      summary: sources.summary,
       createdAt: sources.createdAt,
       updatedAt: sources.updatedAt,
     })
@@ -240,6 +242,10 @@ export async function markSourceVideoFailed(sourceId: string, error: string) {
 
 export async function saveFalRequestId(sourceId: string, requestId: string) {
   await db.update(sources).set({ falRequestId: requestId }).where(eq(sources.id, sourceId))
+}
+
+export async function saveSourceSummary(sourceId: string, summary: string) {
+  await db.update(sources).set({ summary }).where(eq(sources.id, sourceId))
 }
 
 export async function getSourceIndexMetadata(sourceId: string) {
