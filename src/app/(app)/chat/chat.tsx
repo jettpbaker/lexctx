@@ -5,7 +5,7 @@ import type { HydratedCitation } from '~/server/actions/getCitationHydrationById
 
 import { useChat } from '@ai-sdk/react'
 import MuxPlayer from '@mux/mux-player-react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { DefaultChatTransport, getToolName, isToolUIPart, UIMessage } from 'ai'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -107,6 +107,7 @@ export default function Chat({
     queryKey: [CITATIONS_KEY, citationIds],
     queryFn: () => getCitationHydrationByIds(citationIds),
     enabled: citationIds.length > 0,
+    placeholderData: keepPreviousData,
     refetchInterval: (query) => {
       const hasProcessingCitation = (query.state.data ?? []).some(
         (citation) =>
