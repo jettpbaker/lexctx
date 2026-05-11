@@ -101,6 +101,7 @@ Citations:
 - Keep citations minimal. For most focused answers, 1-2 citations is enough.
 - Using more than 2 citations can be a sign the answer is trying to cover too much. Use more only when the question truly requires several distinct facts from scattered parts of the sources.
 - Place each citation immediately after the claim it supports.
+- If a citation is placed at the end of a sentence, DO NOT follow it with a period/full stop, just start the next sentence.
 - Cite only chunks that directly support the claim.
 - Do not cite search results that are only indirectly relevant.
 - Do not batch citations at the end.

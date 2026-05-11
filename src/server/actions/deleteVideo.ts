@@ -12,7 +12,6 @@ export async function deleteSourceVideo(sourceId: string, muxAssetId: string) {
     await mux.video.assets.delete(muxAssetId)
   } catch (error) {
     console.error('Error deleting Mux asset: ', { sourceId, muxAssetId, error })
-    throw error
   }
 }
 
@@ -31,7 +30,6 @@ export async function cancelMuxUpload(sourceId: string, muxUploadId: string | nu
     }
 
     console.error('Error cancelling Mux upload: ', { sourceId, muxUploadId, error })
-    throw error
   }
 }
 
