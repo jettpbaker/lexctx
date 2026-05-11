@@ -110,7 +110,7 @@ Citations:
 - Citation IDs are valid only for the current sourceSearch results; call sourceSearch again before citing in a later response.`
 }
 
-function calculateChatUsage(usage: LanguageModelUsage): ChatUsage {
+function calculateChatUsage(usage: LanguageModelUsage, contextInputTokens: number): ChatUsage {
   const totalInputTokens = usage.inputTokens ?? 0
   const cachedInputTokens = usage.inputTokenDetails.cacheReadTokens ?? 0
   const uncachedInputTokens = Math.max(totalInputTokens - cachedInputTokens, 0)
@@ -122,6 +122,7 @@ function calculateChatUsage(usage: LanguageModelUsage): ChatUsage {
     totalCachedInputTokens: cachedInputTokens,
     totalOutputTokens,
     totalTokens,
+    contextInputTokens,
     totalCostMicroUsd: Math.round(
       uncachedInputTokens * CHAT_MODEL_PRICE.inputUsdPerMillionTokens +
         cachedInputTokens * CHAT_MODEL_PRICE.cachedInputUsdPerMillionTokens +
@@ -192,7 +193,8 @@ export async function POST(req: Request) {
         // For now, maybe don't persist it as final history.
         return
       }
-      const usage = calculateChatUsage(await result.totalUsage)
+      const [billingUsage, finalStepUsage] = await Promise.all([result.totalUsage, result.usage])
+      const usage = calculateChatUsage(billingUsage, finalStepUsage.inputTokens ?? 0)
       await persistChat(id, messages, usage)
     },
   })

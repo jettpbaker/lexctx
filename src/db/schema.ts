@@ -126,6 +126,7 @@ export const chats = p.pgTable('chats', {
   totalCachedInputTokens: p.bigint('total_cached_input_tokens', { mode: 'number' }),
   totalOutputTokens: p.bigint('total_output_tokens', { mode: 'number' }),
   totalTokens: p.bigint('total_tokens', { mode: 'number' }),
+  contextInputTokens: p.bigint('context_input_tokens', { mode: 'number' }),
   totalCostMicroUsd: p.bigint('total_cost_micro_usd', { mode: 'number' }),
   createdAt: p.timestamp('created_at').notNull().defaultNow(),
   updatedAt: p

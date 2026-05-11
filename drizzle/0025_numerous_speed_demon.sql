@@ -1,0 +1,1 @@
+ALTER TABLE "chats" ADD COLUMN "context_input_tokens" bigint;
