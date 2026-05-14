@@ -1,4 +1,4 @@
-import type { OpenAILanguageModelResponsesOptions } from '@ai-sdk/openai'
+// import type { OpenAILanguageModelResponsesOptions } from '@ai-sdk/openai'
 
 import {
   gateway,
@@ -19,7 +19,8 @@ import { chatTools } from '~/server/ai/tools'
 
 // const CHAT_MODEL_ID = 'openai/gpt-5.5'
 const CHAT_MODEL_ID = 'deepseek/deepseek-v4-pro'
-const CHAT_MODEL_PRICE = modelPriceMapping['GPT-5.5']
+const CHAT_MODEL = gateway(CHAT_MODEL_ID)
+const CHAT_MODEL_PRICE = modelPriceMapping['DeepSeek V4 Pro']
 
 export function gzipAsync(input: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -165,14 +166,14 @@ export async function POST(req: Request) {
   await persistChat(id, validatedMessages)
 
   const result = streamText({
-    model: gateway(CHAT_MODEL_ID),
+    model: CHAT_MODEL,
     providerOptions: {
-      openai: {
-        reasoningEffort: 'low',
-        reasoningSummary: 'auto',
-        promptCacheKey: id,
-        textVerbosity: 'low',
-      } satisfies OpenAILanguageModelResponsesOptions,
+      // openai: {
+      //   reasoningEffort: 'low',
+      //   reasoningSummary: 'auto',
+      //   promptCacheKey: id,
+      //   textVerbosity: 'low',
+      // } satisfies OpenAILanguageModelResponsesOptions,
     },
     tools: chatTools,
     system: getSystemPrompt(timeZone, locale),
