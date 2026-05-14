@@ -23,6 +23,8 @@ import {
   saveSourceTranscript,
 } from '~/server/actions/sources'
 
+const TRANSCRIPTION_MODEL_ID = 'fal-ai/wizper'
+
 type WizperResult = {
   data: {
     text: string
@@ -121,7 +123,7 @@ function normalizeTranscriptSegments(chunks: WizperChunk[]) {
 async function submitTranscription(input: { url: string }) {
   'use step'
 
-  const queued = await fal.queue.submit('fal-ai/wizper', {
+  const queued = await fal.queue.submit(TRANSCRIPTION_MODEL_ID, {
     input: {
       audio_url: input.url,
     },
@@ -154,13 +156,13 @@ async function generateAndPersistSourceSummary(sourceId: string, transcriptText:
 async function getTranscriptionStatus(requestId: string) {
   'use step'
 
-  return fal.queue.status('fal-ai/wizper', { requestId })
+  return fal.queue.status(TRANSCRIPTION_MODEL_ID, { requestId })
 }
 
 async function getTranscriptionResult(requestId: string): Promise<WizperResult> {
   'use step'
 
-  return fal.queue.result('fal-ai/wizper', { requestId })
+  return fal.queue.result(TRANSCRIPTION_MODEL_ID, { requestId })
 }
 
 async function persistSourceTranscript(
