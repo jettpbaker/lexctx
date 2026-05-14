@@ -176,6 +176,13 @@
       "when": 1778410571684,
       "tag": "0024_sharp_steel_serpent",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1778494267944,
+      "tag": "0025_numerous_speed_demon",
+      "breakpoints": true
     }
   ]
 }

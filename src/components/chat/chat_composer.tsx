@@ -69,10 +69,11 @@ export function ChatComposer({
   }, [canSubmit, onSubmit, value])
 
   const maxContextTokens = 272_000
+  const contextInputTokens = usage?.contextInputTokens ?? 0
   const usedContextPercent = new Intl.NumberFormat('en-US', {
     maximumFractionDigits: 0,
     style: 'percent',
-  }).format((usage?.totalTokens ?? 0) / maxContextTokens)
+  }).format(contextInputTokens / maxContextTokens)
   const price = ((usage?.totalCostMicroUsd ?? 0) / 1_000_000).toFixed(2).padStart(5, '0')
   const [d1, d2, , d3, d4] = price
 
@@ -163,7 +164,7 @@ export function ChatComposer({
               </div>
             </div>
             <div>
-              <Context maxTokens={maxContextTokens} usedTokens={usage?.totalTokens ?? 0}>
+              <Context maxTokens={maxContextTokens} usedTokens={contextInputTokens}>
                 <Tooltip>
                   <TooltipTrigger render={<ContextTrigger />} />
                   <TooltipContent>{usedContextPercent} context used</TooltipContent>

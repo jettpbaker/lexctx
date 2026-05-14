@@ -314,6 +314,7 @@ export type ChatUsage = {
   totalCachedInputTokens: number
   totalOutputTokens: number
   totalTokens: number
+  contextInputTokens: number
   totalCostMicroUsd: number
 }
 
@@ -343,6 +344,7 @@ export async function upsertChat(
           totalCachedInputTokens: usage.totalCachedInputTokens,
           totalOutputTokens: usage.totalOutputTokens,
           totalTokens: usage.totalTokens,
+          contextInputTokens: usage.contextInputTokens,
           totalCostMicroUsd: sql`coalesce(${chats.totalCostMicroUsd}, 0) + ${usage.totalCostMicroUsd}`,
         }),
       },
@@ -423,6 +425,7 @@ export async function getChatUsageById(chatId: string) {
       totalCachedInputTokens: chats.totalCachedInputTokens,
       totalOutputTokens: chats.totalOutputTokens,
       totalTokens: chats.totalTokens,
+      contextInputTokens: chats.contextInputTokens,
       totalCostMicroUsd: chats.totalCostMicroUsd,
     })
     .from(chats)

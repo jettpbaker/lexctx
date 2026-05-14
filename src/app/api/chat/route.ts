@@ -1,4 +1,4 @@
-import type { OpenAILanguageModelResponsesOptions } from '@ai-sdk/openai'
+// import type { OpenAILanguageModelResponsesOptions } from '@ai-sdk/openai'
 
 import {
   gateway,
@@ -17,8 +17,10 @@ import { ChatUsage, getChatById, upsertChat } from '~/server/actions/sources'
 import { modelPriceMapping } from '~/server/ai/modelPriceMapping'
 import { chatTools } from '~/server/ai/tools'
 
-const CHAT_MODEL_ID = 'openai/gpt-5.5'
-const CHAT_MODEL_PRICE = modelPriceMapping['GPT-5.5']
+// const CHAT_MODEL_ID = 'openai/gpt-5.5'
+const CHAT_MODEL_ID = 'deepseek/deepseek-v4-pro'
+const CHAT_MODEL = gateway(CHAT_MODEL_ID)
+const CHAT_MODEL_PRICE = modelPriceMapping['DeepSeek V4 Pro']
 
 export function gzipAsync(input: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -101,6 +103,7 @@ Citations:
 - Keep citations minimal. For most focused answers, 1-2 citations is enough.
 - Using more than 2 citations can be a sign the answer is trying to cover too much. Use more only when the question truly requires several distinct facts from scattered parts of the sources.
 - Place each citation immediately after the claim it supports.
+- If a citation is placed at the end of a sentence, DO NOT follow it with a period/full stop, just start the next sentence.
 - Cite only chunks that directly support the claim.
 - Do not cite search results that are only indirectly relevant.
 - Do not batch citations at the end.
@@ -109,7 +112,7 @@ Citations:
 - Citation IDs are valid only for the current sourceSearch results; call sourceSearch again before citing in a later response.`
 }
 
-function calculateChatUsage(usage: LanguageModelUsage): ChatUsage {
+function calculateChatUsage(usage: LanguageModelUsage, contextInputTokens: number): ChatUsage {
   const totalInputTokens = usage.inputTokens ?? 0
   const cachedInputTokens = usage.inputTokenDetails.cacheReadTokens ?? 0
   const uncachedInputTokens = Math.max(totalInputTokens - cachedInputTokens, 0)
@@ -121,6 +124,7 @@ function calculateChatUsage(usage: LanguageModelUsage): ChatUsage {
     totalCachedInputTokens: cachedInputTokens,
     totalOutputTokens,
     totalTokens,
+    contextInputTokens,
     totalCostMicroUsd: Math.round(
       uncachedInputTokens * CHAT_MODEL_PRICE.inputUsdPerMillionTokens +
         cachedInputTokens * CHAT_MODEL_PRICE.cachedInputUsdPerMillionTokens +
@@ -162,14 +166,14 @@ export async function POST(req: Request) {
   await persistChat(id, validatedMessages)
 
   const result = streamText({
-    model: gateway(CHAT_MODEL_ID),
+    model: CHAT_MODEL,
     providerOptions: {
-      openai: {
-        reasoningEffort: 'low',
-        reasoningSummary: 'auto',
-        promptCacheKey: id,
-        textVerbosity: 'low',
-      } satisfies OpenAILanguageModelResponsesOptions,
+      // openai: {
+      //   reasoningEffort: 'low',
+      //   reasoningSummary: 'auto',
+      //   promptCacheKey: id,
+      //   textVerbosity: 'low',
+      // } satisfies OpenAILanguageModelResponsesOptions,
     },
     tools: chatTools,
     system: getSystemPrompt(timeZone, locale),
@@ -191,7 +195,8 @@ export async function POST(req: Request) {
         // For now, maybe don't persist it as final history.
         return
       }
-      const usage = calculateChatUsage(await result.totalUsage)
+      const [billingUsage, finalStepUsage] = await Promise.all([result.totalUsage, result.usage])
+      const usage = calculateChatUsage(billingUsage, finalStepUsage.inputTokens ?? 0)
       await persistChat(id, messages, usage)
     },
   })
