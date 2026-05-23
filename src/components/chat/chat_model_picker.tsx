@@ -8,7 +8,12 @@ import { useHorizontalScrollEdges } from '~/components/ai-elements/scroll-fade'
 import { ModelLogo } from '~/components/chat/model_logo'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { cn } from '~/lib/utils'
-import { getChatModelConfig, type ChatModelId, type ChatModelLogo } from '~/server/ai/modelMapping'
+import {
+  getChatModelConfig,
+  getChatModelCostTier,
+  type ChatModelId,
+  type ChatModelLogo,
+} from '~/server/ai/modelMapping'
 
 type ChatModelOption = {
   id: ChatModelId
@@ -272,6 +277,7 @@ function ModelList({
     <div className='flex flex-col gap-0.5 px-3 py-1'>
       {provider.models.map((model) => {
         const active = model.id === modelId
+        const costTier = getChatModelCostTier(getChatModelConfig(model.id).pricing)
 
         return (
           <button
@@ -279,7 +285,7 @@ function ModelList({
             type='button'
             onClick={() => onSelect(model.id)}
             className={cn(
-              'flex items-center justify-between gap-2 rounded-md px-3 py-2 text-left transition-colors',
+              'flex items-start justify-between gap-2 rounded-md px-3 py-2 text-left transition-colors',
               active ? 'bg-secondary' : 'hover:bg-muted/50'
             )}
           >
@@ -292,7 +298,16 @@ function ModelList({
                 <span className='truncate'>{model.description}</span>
               </span>
             </span>
-            <ModelCheck active={active} />
+            {active ? (
+              <ModelCheck active={true} />
+            ) : (
+              <span
+                aria-label={`Cost tier ${costTier} of 4`}
+                className='shrink-0 font-mono text-[13px] tracking-tight text-muted-foreground tabular-nums'
+              >
+                {'$'.repeat(costTier)}
+              </span>
+            )}
           </button>
         )
       })}

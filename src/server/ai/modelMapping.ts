@@ -133,3 +133,13 @@ export function parseChatModelId(value: unknown): ChatModelId {
 export function getChatModelConfig(modelId: ChatModelId): ChatModelConfig {
   return modelMapping[modelId]
 }
+
+export type ChatModelCostTier = 1 | 2 | 3 | 4
+
+export function getChatModelCostTier(pricing: ModelPrice): ChatModelCostTier {
+  const output = pricing.outputUsdPerMillionTokens
+  if (output >= 25) return 4
+  if (output >= 10) return 3
+  if (output >= 5) return 2
+  return 1
+}

@@ -27,20 +27,65 @@ import { parseChatModelId, type ChatModelId } from '~/server/ai/modelMapping'
 
 const CHAT_MAX_STEPS = 12
 type ChatProviderOptions = NonNullable<Parameters<typeof streamText>[0]['providerOptions']>
+type OpenAIReasoningEffort = NonNullable<OpenAILanguageModelResponsesOptions['reasoningEffort']>
+type XaiReasoningEffort = NonNullable<XaiLanguageModelResponsesOptions['reasoningEffort']>
+type AnthropicLanguageModelOptions = {
+  thinking?:
+    | {
+        type: 'adaptive'
+        display?: 'summarized' | 'omitted'
+      }
+    | {
+        type: 'enabled'
+        budgetTokens: number
+      }
+  effort?: 'low' | 'medium' | 'high'
+}
+
+const OPENAI_REASONING_EFFORT_BY_MODEL: Partial<Record<ChatModelId, OpenAIReasoningEffort>> = {
+  'openai/gpt-5.5': 'low',
+  'openai/gpt-5.4': 'medium',
+  'openai/gpt-5.4-mini': 'high',
+} as const
+
+const XAI_REASONING_EFFORT_BY_MODEL: Partial<Record<ChatModelId, XaiReasoningEffort>> = {
+  'xai/grok-4.3': 'high',
+} as const
+
+const ANTHROPIC_REASONING_BY_MODEL: Partial<Record<ChatModelId, AnthropicLanguageModelOptions>> = {
+  'anthropic/claude-opus-4.7': {
+    thinking: { type: 'adaptive', display: 'summarized' },
+    effort: 'low',
+  },
+  'anthropic/claude-sonnet-4.6': {
+    thinking: { type: 'adaptive', display: 'summarized' },
+    effort: 'medium',
+  },
+  'anthropic/claude-haiku-4.5': {
+    thinking: { type: 'enabled', budgetTokens: 12_000 },
+  },
+} as const
 
 function getChatProviderOptions(modelId: ChatModelId, chatId: string): ChatProviderOptions | undefined {
   if (modelId.startsWith('anthropic/')) {
+    const reasoningOptions = ANTHROPIC_REASONING_BY_MODEL[modelId]
+
     return {
       gateway: {
         caching: 'auto',
       },
+      ...(reasoningOptions && {
+        anthropic: reasoningOptions,
+      }),
     }
   }
 
   if (modelId.startsWith('openai/')) {
+    const reasoningEffort = OPENAI_REASONING_EFFORT_BY_MODEL[modelId] ?? 'medium'
+
     return {
       openai: {
-        reasoningEffort: 'low',
+        reasoningEffort,
         reasoningSummary: 'auto',
         promptCacheKey: chatId,
         textVerbosity: 'low',
@@ -49,9 +94,11 @@ function getChatProviderOptions(modelId: ChatModelId, chatId: string): ChatProvi
   }
 
   if (modelId.startsWith('xai/')) {
+    const reasoningEffort = XAI_REASONING_EFFORT_BY_MODEL[modelId] ?? 'medium'
+
     return {
       xai: {
-        reasoningEffort: 'medium',
+        reasoningEffort,
       } satisfies XaiLanguageModelResponsesOptions,
     }
   }
