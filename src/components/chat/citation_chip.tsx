@@ -1,6 +1,6 @@
 'use client'
 
-import type { HydratedCitation } from '~/server/actions/getCitationHydrationByIds'
+import type { HydratedCitation } from '~/lib/types/citations'
 
 import { PlayIcon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'

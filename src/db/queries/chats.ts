@@ -2,20 +2,7 @@ import { asc, desc, eq, sql } from 'drizzle-orm'
 import { unstable_noStore as noStore } from 'next/cache'
 import db from '~/db'
 import { chats } from '~/db/schema'
-
-export type ChatType = {
-  id: string
-  title: string | null
-}
-
-export type ChatUsage = {
-  totalInputTokens: number
-  totalCachedInputTokens: number
-  totalOutputTokens: number
-  totalTokens: number
-  contextInputTokens: number
-  totalCostMicroUsd: number
-}
+import type { ChatType, ChatUsage } from '~/lib/types/chat'
 
 export async function getAllChats(): Promise<ChatType[]> {
   noStore()
@@ -99,5 +86,3 @@ export async function getChatUsageById(chatId: string) {
 
   return chat
 }
-
-export type ChatUsageSummary = Awaited<ReturnType<typeof getChatUsageById>>

@@ -14,7 +14,8 @@ import {
   type StreamTextResult,
 } from 'ai'
 import { gzip, gunzip } from 'zlib'
-import { type ChatUsage, getChatById, upsertChat } from '~/db/queries/chats'
+import type { ChatUsage } from '~/lib/types/chat'
+import { getChatById, upsertChat } from '~/db/queries/chats'
 import {
   addLanguageModelUsages,
   calculateChatUsage,

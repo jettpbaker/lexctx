@@ -33,9 +33,6 @@ export {
 } from '~/db/queries/sources'
 
 export {
-  type ChatType,
-  type ChatUsage,
-  type ChatUsageSummary,
   getAllChats,
   upsertChat,
   upsertChatTitle,
@@ -44,9 +41,4 @@ export {
   getChatUsageById,
 } from '~/db/queries/chats'
 
-export {
-  upsertRagChunks,
-  getNearbyRagChunks,
-  getCitationHydrationRowsByLookups,
-  type CitationLookup,
-} from '~/db/queries/rag-chunks'
+export { upsertRagChunks, getNearbyRagChunks, getCitationHydrationRowsByLookups } from '~/db/queries/rag-chunks'

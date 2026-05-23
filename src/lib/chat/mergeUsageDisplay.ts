@@ -1,10 +1,9 @@
-import type { ChatUsage } from '~/server/actions/sources'
-import type { ChatUsageSummary } from '~/server/actions/sources'
+import type { ChatUsage, ChatUsageSummary, PersistedChatUsage } from '~/lib/types/chat'
 
 export function mergeUsageForDisplay(
   persisted: ChatUsageSummary | null | undefined,
   streamingTurn: ChatUsage | null
-): ChatUsageSummary | null {
+): ChatUsage | PersistedChatUsage | null {
   if (!streamingTurn) {
     return persisted ?? null
   }

@@ -1,29 +1,11 @@
 'use server'
 
 import { hybridSearch } from '~/db/chroma'
-
-export type LectureChunkSearchMetadata = {
-  sourceId: string
-  sourceName: string
-  collectionId: string
-  collectionName: string
-  chunkIndex: number
-  startSeconds: number
-  endSeconds: number
-}
-
-export type LectureChunkSearchResult = {
-  id: string
-  citationId: string
-  document: string
-  metadata: LectureChunkSearchMetadata
-  score: number
-}
-
-export type SourceSearchFilters = {
-  sourceIds?: string[]
-  collectionIds?: string[]
-}
+import type {
+  LectureChunkSearchMetadata,
+  LectureChunkSearchResult,
+  SourceSearchFilters,
+} from '~/lib/types/search'
 
 export async function searchSources(
   query: string,

@@ -14,7 +14,7 @@ import { Spinner } from '~/components/ui/spinner'
 import { COLLECTIONS_WITH_SOURCES_KEY } from '~/lib/query_keys'
 import { createCollection } from '~/server/actions/sources'
 
-import type { CollectionsWithSources } from './collections_sidebar_client'
+import type { CollectionsWithSources } from '~/lib/types/collections'
 
 export default function NewCollectionButton() {
   const queryClient = useQueryClient()

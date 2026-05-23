@@ -10,7 +10,7 @@
  * working" without inventing a percentage.
  */
 
-import type { LocalSourceType } from '~/lib/types'
+import type { LocalSourceType } from '~/lib/types/local-pipeline'
 
 export type SourceUiStatus =
   | { kind: 'queued'; queuedFor?: 'hashing' | 'extraction' | 'upload' }

@@ -1,17 +1,15 @@
 'use client'
 
-import type { SourceRowSource } from '~/components/sources/source_row'
-import type { LocalSourceType } from '~/lib/types'
+import type { CollectionsWithSources } from '~/lib/types/collections'
+import type { LocalSourceType } from '~/lib/types/local-pipeline'
+import type { CollectionGroupCollection, SourceRowSource } from '~/lib/types/ui/sources'
 
 import { Cancel01Icon, Search01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
-import {
-  CollectionGroup,
-  type CollectionGroupCollection,
-} from '~/components/sources/collection_group'
+import { CollectionGroup } from '~/components/sources/collection_group'
 import { Separator } from '~/components/ui/separator'
 import { useSourceStore } from '~/hooks/useStore'
 import tickPipeline from '~/lib/localPipeline/tickPipeline'
@@ -37,7 +35,6 @@ import {
 
 import { Button } from './ui/button'
 
-export type CollectionsWithSources = Awaited<ReturnType<typeof listCollectionsWithSources>>
 type DbCollection = CollectionsWithSources[number]
 type DbSource = DbCollection['sources'][number]
 

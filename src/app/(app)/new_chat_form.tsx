@@ -6,12 +6,8 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { ChatComposer } from '~/components/chat/chat_composer'
 import { CHATS_KEY } from '~/lib/query_keys'
+import type { ChatSidebarItem } from '~/lib/types/chat'
 import { generateChatTitle } from '~/server/actions/generateChatTitle'
-import { ChatType } from '~/server/actions/sources'
-
-export type ChatSidebarItem = ChatType & {
-  titleLoading: boolean
-}
 
 export default function NewChatForm() {
   const router = useRouter()

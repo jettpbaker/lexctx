@@ -1,6 +1,7 @@
 'use client'
 
-import type { HydratedCitation } from '~/server/actions/getCitationHydrationByIds'
+import type { CollectionGroupCollection } from '~/lib/types/ui/sources'
+import type { HydratedCitation } from '~/lib/types/citations'
 
 import { useState } from 'react'
 import {
@@ -16,7 +17,6 @@ import { ToolStatusRow } from '~/components/chat/tool_status_row'
 import { toolUiMapping } from '~/components/chat/toolUiMapping'
 import {
   CollectionGroup,
-  type CollectionGroupCollection,
 } from '~/components/sources/collection_group'
 import { SourceRow } from '~/components/sources/source_row'
 import { Button } from '~/components/ui/button'

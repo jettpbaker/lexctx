@@ -2,7 +2,7 @@ import { Add01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { ChatSidebarItem } from '~/app/(app)/new_chat_form'
+import type { ChatSidebarItem } from '~/lib/types/chat'
 import { buttonVariants } from '~/components/ui/button'
 import {
   Sidebar,

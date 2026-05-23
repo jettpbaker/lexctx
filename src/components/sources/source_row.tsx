@@ -24,20 +24,10 @@ import {
   isVideoChipVisible,
   labelForStatus,
   type SourceUiStatus,
-  type VideoUiStatus,
 } from '~/lib/source_status'
 import { cn } from '~/lib/utils'
 
-export type SourceRowSource = {
-  id: string
-  name: string
-  fileSize: number | null
-  createdAt: Date
-  status: SourceUiStatus
-  videoStatus: VideoUiStatus
-}
-
-export type SourceRowAction = (source: SourceRowSource) => void
+import type { SourceRowAction, SourceRowSource } from '~/lib/types/ui/sources'
 
 type SourceRowProps = {
   source: SourceRowSource

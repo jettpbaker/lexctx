@@ -1,6 +1,6 @@
 import type { LanguageModelUsage } from 'ai'
 
-import type { ChatUsage } from '~/db/queries/chats'
+import type { ChatUsage } from '~/lib/types/chat'
 import { modelPriceMapping } from '~/server/ai/modelPriceMapping'
 
 const CHAT_MODEL_PRICE = modelPriceMapping['GPT-5.5']

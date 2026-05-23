@@ -1,9 +1,7 @@
 'use server'
 
-import {
-  getCitationHydrationRowsByLookups,
-  type CitationLookup,
-} from '~/db/queries/rag-chunks'
+import { getCitationHydrationRowsByLookups } from '~/db/queries/rag-chunks'
+import type { CitationLookup, HydratedCitation } from '~/lib/types/citations'
 
 type CitationLookupWithId = CitationLookup & {
   citationId: string
@@ -22,21 +20,6 @@ function parseCitationLookup(citationId: string): CitationLookupWithId | null {
 
 function isCitationLookup(lookup: CitationLookupWithId | null): lookup is CitationLookupWithId {
   return lookup !== null
-}
-
-export type HydratedCitation = {
-  citationId: string
-  sourceId: string
-  sourceName: string
-  collectionId: string
-  collectionName: string
-  chunkIndex: number
-  muxPlaybackId: string | null
-  muxBlurDataUrl: string | null
-  muxBlurAspectRatio: number | null
-  videoStatus: 'pending_upload' | 'uploading' | 'processing' | 'ready' | 'failed' | 'deleted'
-  startSeconds: number
-  endSeconds: number
 }
 
 export async function getCitationHydrationByIds(
