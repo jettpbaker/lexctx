@@ -1,4 +1,4 @@
-// import type { OpenAILanguageModelResponsesOptions } from '@ai-sdk/openai'
+import type { OpenAILanguageModelResponsesOptions } from '@ai-sdk/openai'
 
 import {
   gateway,
@@ -7,20 +7,25 @@ import {
   convertToModelMessages,
   stepCountIs,
   validateUIMessages,
-  UIDataTypes,
   createIdGenerator,
   consumeStream,
-  LanguageModelUsage,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  type StreamTextResult,
 } from 'ai'
 import { gzip, gunzip } from 'zlib'
 import { ChatUsage, getChatById, upsertChat } from '~/server/actions/sources'
-import { modelPriceMapping } from '~/server/ai/modelPriceMapping'
+import {
+  addLanguageModelUsages,
+  calculateChatUsage,
+  emptyLanguageModelUsage,
+} from '~/server/ai/calculateChatUsage'
 import { chatTools } from '~/server/ai/tools'
 
-// const CHAT_MODEL_ID = 'openai/gpt-5.5'
-const CHAT_MODEL_ID = 'deepseek/deepseek-v4-pro'
+const CHAT_MODEL_ID = 'openai/gpt-5.5'
+// const CHAT_MODEL_ID = 'deepseek/deepseek-v4-pro'
 const CHAT_MODEL = gateway(CHAT_MODEL_ID)
-const CHAT_MODEL_PRICE = modelPriceMapping['DeepSeek V4 Pro']
+const CHAT_MAX_STEPS = 12
 
 export function gzipAsync(input: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -55,7 +60,11 @@ async function persistChat(chatId: string, messages: UIMessage[], usage?: ChatUs
   await upsertChat(chatId, messagesGzipBase64, messageCount, usage)
 }
 
-export type LexMessage = UIMessage<unknown, UIDataTypes>
+export type LexUIDataTypes = {
+  usage: ChatUsage
+}
+
+export type LexMessage = UIMessage<unknown, LexUIDataTypes>
 
 function getSystemPrompt(timeZone: unknown, locale: unknown) {
   const now = new Date()
@@ -112,27 +121,6 @@ Citations:
 - Citation IDs are valid only for the current sourceSearch results; call sourceSearch again before citing in a later response.`
 }
 
-function calculateChatUsage(usage: LanguageModelUsage, contextInputTokens: number): ChatUsage {
-  const totalInputTokens = usage.inputTokens ?? 0
-  const cachedInputTokens = usage.inputTokenDetails.cacheReadTokens ?? 0
-  const uncachedInputTokens = Math.max(totalInputTokens - cachedInputTokens, 0)
-  const totalOutputTokens = usage.outputTokens ?? 0
-  const totalTokens = usage.totalTokens ?? totalInputTokens + totalOutputTokens
-
-  return {
-    totalInputTokens,
-    totalCachedInputTokens: cachedInputTokens,
-    totalOutputTokens,
-    totalTokens,
-    contextInputTokens,
-    totalCostMicroUsd: Math.round(
-      uncachedInputTokens * CHAT_MODEL_PRICE.inputUsdPerMillionTokens +
-        cachedInputTokens * CHAT_MODEL_PRICE.cachedInputUsdPerMillionTokens +
-        totalOutputTokens * CHAT_MODEL_PRICE.outputUsdPerMillionTokens
-    ),
-  }
-}
-
 export async function loadChat(id: string): Promise<{ exists: boolean; messages: LexMessage[] }> {
   const [chat] = await getChatById(id)
 
@@ -165,39 +153,69 @@ export async function POST(req: Request) {
 
   await persistChat(id, validatedMessages)
 
-  const result = streamText({
-    model: CHAT_MODEL,
-    providerOptions: {
-      // openai: {
-      //   reasoningEffort: 'low',
-      //   reasoningSummary: 'auto',
-      //   promptCacheKey: id,
-      //   textVerbosity: 'low',
-      // } satisfies OpenAILanguageModelResponsesOptions,
-    },
-    tools: chatTools,
-    system: getSystemPrompt(timeZone, locale),
-    messages: await convertToModelMessages(validatedMessages),
-    stopWhen: stepCountIs(5),
-    abortSignal: req.signal,
+  const modelMessages = await convertToModelMessages(validatedMessages)
+
+  const generateMessageId = createIdGenerator({
+    prefix: 'msg',
+    size: 16,
   })
 
-  return result.toUIMessageStreamResponse({
+  let streamResult: StreamTextResult<typeof chatTools, never> | undefined
+
+  const stream = createUIMessageStream<LexMessage>({
     originalMessages: messages,
-    generateMessageId: createIdGenerator({
-      prefix: 'msg',
-      size: 16,
-    }),
-    consumeSseStream: consumeStream,
+    generateId: generateMessageId,
+    execute: ({ writer }) => {
+      let turnUsage = emptyLanguageModelUsage()
+
+      streamResult = streamText({
+        model: CHAT_MODEL,
+        providerOptions: {
+          openai: {
+            reasoningEffort: 'low',
+            reasoningSummary: 'auto',
+            promptCacheKey: id,
+            textVerbosity: 'low',
+          } satisfies OpenAILanguageModelResponsesOptions,
+        },
+        tools: chatTools,
+        system: getSystemPrompt(timeZone, locale),
+        messages: modelMessages,
+        stopWhen: stepCountIs(CHAT_MAX_STEPS),
+        abortSignal: req.signal,
+        onStepFinish: ({ usage }) => {
+          turnUsage = addLanguageModelUsages(turnUsage, usage)
+          writer.write({
+            type: 'data-usage',
+            data: calculateChatUsage(turnUsage, usage.inputTokens ?? 0),
+            transient: true,
+          })
+        },
+      })
+
+      writer.merge(
+        streamResult.toUIMessageStream({
+          originalMessages: messages,
+          generateMessageId,
+        })
+      )
+    },
     onFinish: async ({ messages, isAborted }) => {
-      if (isAborted) {
-        // This is expected to be partial.
-        // For now, maybe don't persist it as final history.
+      if (isAborted || !streamResult) {
         return
       }
-      const [billingUsage, finalStepUsage] = await Promise.all([result.totalUsage, result.usage])
+
+      const [billingUsage, finalStepUsage] = await Promise.all([
+        streamResult.totalUsage,
+        streamResult.usage,
+      ])
       const usage = calculateChatUsage(billingUsage, finalStepUsage.inputTokens ?? 0)
       await persistChat(id, messages, usage)
     },
+  })
+
+  return createUIMessageStreamResponse({
+    stream,
+    consumeSseStream: consumeStream,
   })
 }

@@ -430,6 +430,12 @@ function mergeCollections(
       sources.push(sourceRowFromLocalSource(source))
     }
 
+    sources.sort((a, b) => {
+      const createdAtDiff = b.createdAt.getTime() - a.createdAt.getTime()
+      if (createdAtDiff !== 0) return createdAtDiff
+      return a.id.localeCompare(b.id)
+    })
+
     return {
       id: collection.id,
       name: collection.name,
