@@ -4,6 +4,7 @@ import { asc, desc, eq, sql } from 'drizzle-orm'
 import { unstable_noStore as noStore } from 'next/cache'
 import db from '~/db'
 import { chats } from '~/db/schema'
+import type { ChatModelId } from '~/server/ai/modelMapping'
 
 export async function getAllChats(): Promise<ChatType[]> {
   noStore()
@@ -21,12 +22,14 @@ export async function upsertChat(
   chatId: string,
   messagesGzipBase64: string,
   messageCount: number,
-  usage?: ChatUsage
+  usage?: ChatUsage,
+  modelId?: ChatModelId
 ) {
   const values = {
     id: chatId,
     messagesGzipBase64,
     messageCount,
+    ...(modelId && { modelId }),
     ...usage,
   }
 
@@ -38,6 +41,7 @@ export async function upsertChat(
       set: {
         messagesGzipBase64,
         messageCount,
+        ...(modelId && { modelId }),
         ...(usage && {
           totalInputTokens: usage.totalInputTokens,
           totalCachedInputTokens: usage.totalCachedInputTokens,
@@ -47,6 +51,16 @@ export async function upsertChat(
           totalCostMicroUsd: sql`coalesce(${chats.totalCostMicroUsd}, 0) + ${usage.totalCostMicroUsd}`,
         }),
       },
+    })
+}
+
+export async function updateChatModelId(chatId: string, modelId: ChatModelId) {
+  await db
+    .insert(chats)
+    .values({ id: chatId, modelId })
+    .onConflictDoUpdate({
+      target: chats.id,
+      set: { modelId },
     })
 }
 

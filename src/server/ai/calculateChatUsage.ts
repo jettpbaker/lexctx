@@ -1,9 +1,7 @@
 import type { LanguageModelUsage } from 'ai'
 import type { ChatUsage } from '~/lib/types/chat'
 
-import { modelPriceMapping } from '~/server/ai/modelPriceMapping'
-
-const CHAT_MODEL_PRICE = modelPriceMapping['GPT-5.5']
+import { getChatModelConfig, type ChatModelId } from '~/server/ai/modelMapping'
 
 function addTokenCounts(a: number | undefined, b: number | undefined) {
   return (a ?? 0) + (b ?? 0)
@@ -64,8 +62,10 @@ export function addLanguageModelUsages(
 
 export function calculateChatUsage(
   usage: LanguageModelUsage,
-  contextInputTokens: number
+  contextInputTokens: number,
+  modelId: ChatModelId
 ): ChatUsage {
+  const modelPrice = getChatModelConfig(modelId).pricing
   const totalInputTokens = usage.inputTokens ?? 0
   const cachedInputTokens = usage.inputTokenDetails?.cacheReadTokens ?? 0
   const uncachedInputTokens = Math.max(totalInputTokens - cachedInputTokens, 0)
@@ -79,9 +79,9 @@ export function calculateChatUsage(
     totalTokens,
     contextInputTokens,
     totalCostMicroUsd: Math.round(
-      uncachedInputTokens * CHAT_MODEL_PRICE.inputUsdPerMillionTokens +
-        cachedInputTokens * CHAT_MODEL_PRICE.cachedInputUsdPerMillionTokens +
-        totalOutputTokens * CHAT_MODEL_PRICE.outputUsdPerMillionTokens
+      uncachedInputTokens * modelPrice.inputUsdPerMillionTokens +
+        cachedInputTokens * modelPrice.cachedInputUsdPerMillionTokens +
+        totalOutputTokens * modelPrice.outputUsdPerMillionTokens
     ),
   }
 }

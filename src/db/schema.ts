@@ -120,6 +120,7 @@ export const generationStatusEnum = p.pgEnum('generation_status', [
 export const chats = p.pgTable('chats', {
   id: p.text('id').primaryKey(),
   title: p.text('title').default('New chat'),
+  modelId: p.text('model_id').notNull().default('xai/grok-4.3'),
   messagesGzipBase64: p.text('messages_gzip_base64'),
   messageCount: p.integer('message_count').notNull().default(0),
   totalInputTokens: p.bigint('total_input_tokens', { mode: 'number' }),

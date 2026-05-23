@@ -9,7 +9,7 @@ import MuxPlayer from '@mux/mux-player-react'
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { DefaultChatTransport, getToolName, isToolUIPart, UIMessage } from 'ai'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Conversation, ConversationContent } from '~/components/ai-elements/conversation'
 import { Message, MessageContent, MessageResponse } from '~/components/ai-elements/message'
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '~/components/ai-elements/reasoning'
@@ -19,9 +19,10 @@ import { CitationChip, CitationChipPending, citationNotReadyTooltip } from '~/co
 import { SourceLinkChip } from '~/components/chat/source_link_chip'
 import { ToolStatusRow } from '~/components/chat/tool_status_row'
 import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
-import { getChatUsageById } from '~/server/actions/chats'
+import { getChatUsageById, updateChatModelId } from '~/server/actions/chats'
 import { useChatGenerationStore } from '~/hooks/useChatGenerationStore'
 import { mergeUsageForDisplay } from '~/lib/chat/mergeUsageDisplay'
+import { lastUsedChatModelClientCookieString } from '~/lib/chat_model_cookie'
 import { hydratedSourceLinkToCitation } from '~/lib/chat/sourceLinkPlayback'
 import {
   isCollectionLinkHref,
@@ -32,18 +33,37 @@ import {
 import { CHAT_USAGE_KEY, CITATIONS_KEY, SOURCE_LINKS_KEY } from '~/lib/query_keys'
 import { getCitationHydrationByIds } from '~/server/actions/getCitationHydrationByIds'
 import { getSourceLinkHydrationByIds } from '~/server/actions/getSourceLinkHydrationByIds'
+import type { ChatModelId } from '~/server/ai/modelMapping'
 
 export default function Chat({
   id,
   initialMessages,
   initialQuery,
+  initialModelId,
 }: {
   id: string
   initialMessages: LexMessage[]
   initialQuery?: string
+  initialModelId: ChatModelId
 }) {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const [modelId, setModelIdState] = useState(initialModelId)
+  const modelIdRef = useRef(modelId)
+  modelIdRef.current = modelId
+
+  useEffect(() => {
+    setModelIdState(initialModelId)
+  }, [id, initialModelId])
+
+  const setModelId = useCallback(
+    (nextModelId: ChatModelId) => {
+      setModelIdState(nextModelId)
+      document.cookie = lastUsedChatModelClientCookieString(nextModelId)
+      void updateChatModelId(id, nextModelId)
+    },
+    [id]
+  )
   const [streamingTurnUsage, setStreamingTurnUsage] = useState<ChatUsage | null>(null)
   const hasAppendedQuery = useRef(false)
 
@@ -70,6 +90,7 @@ export default function Chat({
           body: {
             id,
             message: messages.at(-1),
+            modelId: modelIdRef.current,
             locale: navigator.languages.at(0) ?? navigator.language,
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           },
@@ -258,6 +279,8 @@ export default function Chat({
           onSubmit={handleSubmit}
           onStop={stop}
           usage={displayUsage}
+          modelId={modelId}
+          onModelChange={setModelId}
         />
       </div>
     </div>

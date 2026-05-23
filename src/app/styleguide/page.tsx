@@ -5,6 +5,7 @@ import type { CollectionGroupCollection } from '~/lib/types/ui/sources'
 
 import { useState } from 'react'
 import {
+  CHAT_USAGE_POPOVER_GALLERY,
   CITATION_CHIP_GALLERY,
   COLLECTIONS_GALLERY,
   ROW_GALLERY,
@@ -13,6 +14,8 @@ import {
 } from '~/app/styleguide/mock_data'
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '~/components/ai-elements/reasoning'
 import { CitationChip, CitationChipPending } from '~/components/chat/citation_chip'
+import { ChatUsagePopoverPanel } from '~/components/chat/chat_usage_popover'
+import { ModelPickerProviderTabsGallery } from '~/app/styleguide/model_picker_provider_tabs_gallery'
 import { ToolStatusRow } from '~/components/chat/tool_status_row'
 import { toolUiMapping } from '~/components/chat/toolUiMapping'
 import { CollectionGroup } from '~/components/sources/collection_group'
@@ -131,6 +134,31 @@ export default function StyleguidePage() {
           <PendingHydrationDemo />
           <ProcessingReadyDemo />
         </div>
+      </Section>
+
+      <Section
+        title='Chat usage popover'
+        description='Token mix uses custom lilac, rose, and sky (oklch, exact conversions from the original hex swatches). Static panels for tuning breakdown rows and cost across usage levels.'
+      >
+        <div className='grid gap-6 md:grid-cols-2 xl:grid-cols-3'>
+          {CHAT_USAGE_POPOVER_GALLERY.map((entry) => (
+            <div key={entry.label} className='flex flex-col gap-2'>
+              <p className='text-xs font-medium tracking-wide text-muted-foreground uppercase'>
+                {entry.label}
+              </p>
+              <div className='flex w-64 flex-col rounded-lg bg-popover p-3 text-xs text-popover-foreground shadow-md ring-1 ring-foreground/10'>
+                <ChatUsagePopoverPanel usage={entry.usage} maxTokens={entry.maxTokens} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section
+        title='Model picker'
+        description='Provider pill tabs with animated model list, using the settled chat models in price order.'
+      >
+        <ModelPickerProviderTabsGallery />
       </Section>
 
       <Section

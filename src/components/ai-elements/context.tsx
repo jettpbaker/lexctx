@@ -92,9 +92,9 @@ const ContextIcon = () => {
   )
 }
 
-export type ContextTriggerProps = ComponentProps<'div'>
+export type ContextTriggerProps = ComponentProps<'button'>
 
-export const ContextTrigger = ({ children, className, ...props }: ContextTriggerProps) => {
+export const ContextTrigger = ({ children, className, type, ...props }: ContextTriggerProps) => {
   const { usedTokens, maxTokens } = useContextValue()
   const usedPercent = usedTokens / maxTokens
   const renderedPercent = new Intl.NumberFormat('en-US', {
@@ -103,9 +103,10 @@ export const ContextTrigger = ({ children, className, ...props }: ContextTrigger
   }).format(usedPercent)
 
   return (
-    <div
+    <button
+      type={type ?? 'button'}
       className={cn(
-        "inline-flex items-center gap-1 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+        "inline-flex cursor-pointer items-center gap-1 outline-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
         className
       )}
       {...props}
@@ -113,12 +114,12 @@ export const ContextTrigger = ({ children, className, ...props }: ContextTrigger
       {children ?? (
         <>
           <ContextIcon />
-          <span className='cursor-default font-mono text-xs text-muted-foreground'>
+          <span className='font-mono text-xs text-muted-foreground'>
             {renderedPercent}
           </span>
         </>
       )}
-    </div>
+    </button>
   )
 }
 

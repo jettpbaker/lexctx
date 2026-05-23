@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 
 import { Suspense } from 'react'
 import CollectionsSidebarClient from '~/components/collections_sidebar_client'
+import CollectionsSidebarError from '~/components/collections_sidebar_error'
 import { Sidebar, SidebarHeader } from '~/components/ui/sidebar'
 import { Spinner } from '~/components/ui/spinner'
 import { listCollectionsWithSources } from '~/db/queries/collections'
@@ -36,9 +37,14 @@ export default async function CollectionsSidebar() {
 }
 
 async function CollectionsSidebarData() {
-  const initialCollections = await listCollectionsWithSources()
+  try {
+    const initialCollections = await listCollectionsWithSources()
 
-  return <CollectionsSidebarClient initialCollections={initialCollections} />
+    return <CollectionsSidebarClient initialCollections={initialCollections} />
+  } catch (error) {
+    console.error('Failed to load collections sidebar:', error)
+    return <CollectionsSidebarError />
+  }
 }
 
 function CollectionsSidebarLoading() {

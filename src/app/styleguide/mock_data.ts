@@ -1,4 +1,5 @@
 import type { SourceUiStatus, VideoUiStatus } from '~/lib/source_status'
+import type { ChatUsage } from '~/lib/types/chat'
 import type { HydratedCitation } from '~/lib/types/citations'
 import type { CollectionGroupCollection, SourceRowSource } from '~/lib/types/ui/sources'
 
@@ -577,5 +578,72 @@ export const CITATION_CHIP_GALLERY: { label: string; citation: HydratedCitation 
   {
     label: 'Failed',
     citation: citation({ videoStatus: 'failed', sourceName: 'lecture_08_memory.mp4' }),
+  },
+]
+
+export const CHAT_USAGE_POPOVER_GALLERY: {
+  label: string
+  usage: ChatUsage
+  maxTokens: number
+}[] = [
+  {
+    label: 'Empty session',
+    maxTokens: 200_000,
+    usage: {
+      totalInputTokens: 0,
+      totalCachedInputTokens: 0,
+      totalOutputTokens: 0,
+      totalTokens: 0,
+      contextInputTokens: 0,
+      totalCostMicroUsd: 0,
+    },
+  },
+  {
+    label: 'Early chat (~12%)',
+    maxTokens: 200_000,
+    usage: {
+      totalInputTokens: 18_400,
+      totalCachedInputTokens: 2_100,
+      totalOutputTokens: 3_200,
+      totalTokens: 21_600,
+      contextInputTokens: 24_800,
+      totalCostMicroUsd: 12_400,
+    },
+  },
+  {
+    label: 'Mid session (~77%)',
+    maxTokens: 200_000,
+    usage: {
+      totalInputTokens: 98_400,
+      totalCachedInputTokens: 27_800,
+      totalOutputTokens: 28_600,
+      totalTokens: 127_000,
+      contextInputTokens: 154_800,
+      totalCostMicroUsd: 186_500,
+    },
+  },
+  {
+    label: 'Heavy cache mix',
+    maxTokens: 1_000_000,
+    usage: {
+      totalInputTokens: 412_000,
+      totalCachedInputTokens: 318_000,
+      totalOutputTokens: 64_000,
+      totalTokens: 476_000,
+      contextInputTokens: 620_000,
+      totalCostMicroUsd: 42_800,
+    },
+  },
+  {
+    label: 'Near full window',
+    maxTokens: 200_000,
+    usage: {
+      totalInputTokens: 142_000,
+      totalCachedInputTokens: 18_000,
+      totalOutputTokens: 36_000,
+      totalTokens: 178_000,
+      contextInputTokens: 196_000,
+      totalCostMicroUsd: 312_000,
+    },
   },
 ]
