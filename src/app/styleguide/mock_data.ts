@@ -1,6 +1,6 @@
-import type { CollectionGroupCollection, SourceRowSource } from '~/lib/types/ui/sources'
 import type { SourceUiStatus, VideoUiStatus } from '~/lib/source_status'
 import type { HydratedCitation } from '~/lib/types/citations'
+import type { CollectionGroupCollection, SourceRowSource } from '~/lib/types/ui/sources'
 
 const now = new Date()
 const minutesAgo = (n: number) => new Date(now.getTime() - n * 60_000)

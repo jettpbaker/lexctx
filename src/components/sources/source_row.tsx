@@ -2,6 +2,7 @@
 
 import type { CSSProperties, MouseEvent, ReactNode } from 'react'
 import type { KeyboardEvent } from 'react'
+import type { SourceRowAction, SourceRowSource } from '~/lib/types/ui/sources'
 
 import { Delete02Icon, Edit03Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -26,8 +27,6 @@ import {
   type SourceUiStatus,
 } from '~/lib/source_status'
 import { cn } from '~/lib/utils'
-
-import type { SourceRowAction, SourceRowSource } from '~/lib/types/ui/sources'
 
 type SourceRowProps = {
   source: SourceRowSource

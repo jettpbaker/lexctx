@@ -1,6 +1,7 @@
 'use client'
 
 import type { SubmitEvent } from 'react'
+import type { CollectionsWithSources } from '~/lib/types/collections'
 
 import { PlusSignIcon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -13,8 +14,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover
 import { Spinner } from '~/components/ui/spinner'
 import { COLLECTIONS_WITH_SOURCES_KEY } from '~/lib/query_keys'
 import { createCollection } from '~/server/actions/sources'
-
-import type { CollectionsWithSources } from '~/lib/types/collections'
 
 export default function NewCollectionButton() {
   const queryClient = useQueryClient()

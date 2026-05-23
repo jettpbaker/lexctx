@@ -1,8 +1,9 @@
+import type { ChatType, ChatUsage } from '~/lib/types/chat'
+
 import { asc, desc, eq, sql } from 'drizzle-orm'
 import { unstable_noStore as noStore } from 'next/cache'
 import db from '~/db'
 import { chats } from '~/db/schema'
-import type { ChatType, ChatUsage } from '~/lib/types/chat'
 
 export async function getAllChats(): Promise<ChatType[]> {
   noStore()

@@ -1,8 +1,7 @@
 import 'server-only'
 import { UTApi } from 'uploadthing/server'
-import { env } from '~/env'
-
 import { removeSourceAudioMetadata } from '~/db/queries/sources'
+import { env } from '~/env'
 
 export default async function deleteSourceAudio(sourceId: string, key: string) {
   const ut = new UTApi({

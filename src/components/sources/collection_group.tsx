@@ -1,6 +1,11 @@
 'use client'
 
 import type { ChangeEvent, DragEvent, KeyboardEvent } from 'react'
+import type {
+  CollectionGroupCollection,
+  SourceRowAction,
+  SourceRowSource,
+} from '~/lib/types/ui/sources'
 
 import {
   ArrowDown01Icon,
@@ -11,11 +16,7 @@ import {
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useEffect, useRef, useState } from 'react'
-import type {
-  CollectionGroupCollection,
-  SourceRowAction,
-  SourceRowSource,
-} from '~/lib/types/ui/sources'
+import { SourceRow } from '~/components/sources/source_row'
 import { Button } from '~/components/ui/button'
 import {
   Dialog,
@@ -37,7 +38,6 @@ import { type CollectionStatusSummary, summarizeStatuses } from '~/lib/source_st
 import { cn } from '~/lib/utils'
 
 import { Shimmer } from '../ai-elements/shimmer'
-import { SourceRow } from '~/components/sources/source_row'
 
 type CollectionGroupProps = {
   collection: CollectionGroupCollection

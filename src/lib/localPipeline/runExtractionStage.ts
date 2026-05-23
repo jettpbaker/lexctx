@@ -1,5 +1,5 @@
-import { useSourceStore } from '~/hooks/useStore'
 import { markSourceFailed } from '~/db/queries/sources'
+import { useSourceStore } from '~/hooks/useStore'
 
 import extractAudioFile from './media/extractAudioFile'
 

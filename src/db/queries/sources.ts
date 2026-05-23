@@ -1,7 +1,7 @@
 import { asc, desc, eq, inArray } from 'drizzle-orm'
 import db from '~/db'
-import { collections, sources, transcriptSegments } from '~/db/schema'
 import { isUniqueViolation } from '~/db/queries/utils'
+import { collections, sources, transcriptSegments } from '~/db/schema'
 import { MAX_FILES_PER_UPLOAD } from '~/lib/constants'
 import { CONTENT_HASH_TYPE } from '~/lib/constants'
 

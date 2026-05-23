@@ -1,8 +1,9 @@
+import type { CitationLookup } from '~/lib/types/citations'
+
 import { and, asc, eq, gte, lte, or } from 'drizzle-orm'
 import db from '~/db'
 import { collections, ragChunks, sources } from '~/db/schema'
 import { RagChunk } from '~/lib/rag/chunkTranscriptSegments'
-import type { CitationLookup } from '~/lib/types/citations'
 
 export async function upsertRagChunks(sourceId: string, chunks: RagChunk[]) {
   await db.delete(ragChunks).where(eq(ragChunks.sourceId, sourceId))

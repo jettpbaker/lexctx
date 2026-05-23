@@ -1,7 +1,8 @@
 'use server'
 
-import { getCitationHydrationRowsByLookups } from '~/db/queries/rag-chunks'
 import type { CitationLookup, HydratedCitation } from '~/lib/types/citations'
+
+import { getCitationHydrationRowsByLookups } from '~/db/queries/rag-chunks'
 
 type CitationLookupWithId = CitationLookup & {
   citationId: string

@@ -41,4 +41,8 @@ export {
   getChatUsageById,
 } from '~/db/queries/chats'
 
-export { upsertRagChunks, getNearbyRagChunks, getCitationHydrationRowsByLookups } from '~/db/queries/rag-chunks'
+export {
+  upsertRagChunks,
+  getNearbyRagChunks,
+  getCitationHydrationRowsByLookups,
+} from '~/db/queries/rag-chunks'

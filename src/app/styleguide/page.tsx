@@ -1,7 +1,7 @@
 'use client'
 
-import type { CollectionGroupCollection } from '~/lib/types/ui/sources'
 import type { HydratedCitation } from '~/lib/types/citations'
+import type { CollectionGroupCollection } from '~/lib/types/ui/sources'
 
 import { useState } from 'react'
 import {
@@ -15,9 +15,7 @@ import { Reasoning, ReasoningContent, ReasoningTrigger } from '~/components/ai-e
 import { CitationChip, CitationChipPending } from '~/components/chat/citation_chip'
 import { ToolStatusRow } from '~/components/chat/tool_status_row'
 import { toolUiMapping } from '~/components/chat/toolUiMapping'
-import {
-  CollectionGroup,
-} from '~/components/sources/collection_group'
+import { CollectionGroup } from '~/components/sources/collection_group'
 import { SourceRow } from '~/components/sources/source_row'
 import { Button } from '~/components/ui/button'
 

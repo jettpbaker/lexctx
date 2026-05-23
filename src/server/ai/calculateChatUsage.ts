@@ -1,6 +1,6 @@
 import type { LanguageModelUsage } from 'ai'
-
 import type { ChatUsage } from '~/lib/types/chat'
+
 import { modelPriceMapping } from '~/server/ai/modelPriceMapping'
 
 const CHAT_MODEL_PRICE = modelPriceMapping['GPT-5.5']
@@ -62,7 +62,10 @@ export function addLanguageModelUsages(
   }
 }
 
-export function calculateChatUsage(usage: LanguageModelUsage, contextInputTokens: number): ChatUsage {
+export function calculateChatUsage(
+  usage: LanguageModelUsage,
+  contextInputTokens: number
+): ChatUsage {
   const totalInputTokens = usage.inputTokens ?? 0
   const cachedInputTokens = usage.inputTokenDetails?.cacheReadTokens ?? 0
   const uncachedInputTokens = Math.max(totalInputTokens - cachedInputTokens, 0)

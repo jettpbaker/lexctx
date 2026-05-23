@@ -1,11 +1,12 @@
 'use server'
 
-import { hybridSearch } from '~/db/chroma'
 import type {
   LectureChunkSearchMetadata,
   LectureChunkSearchResult,
   SourceSearchFilters,
 } from '~/lib/types/search'
+
+import { hybridSearch } from '~/db/chroma'
 
 export async function searchSources(
   query: string,
