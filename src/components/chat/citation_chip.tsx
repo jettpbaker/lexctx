@@ -18,7 +18,7 @@ function formatTimestamp(seconds: number) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-function citationNotReadyTooltip(status: HydratedCitation['videoStatus']) {
+export function citationNotReadyTooltip(status: HydratedCitation['videoStatus']) {
   switch (status) {
     case 'deleted':
       return 'This source was deleted'

@@ -209,6 +209,22 @@ export async function saveSourceTranscript(
     .where(eq(sources.id, sourceId))
 }
 
+export async function getSourceLinkHydrationByIds(sourceIds: string[]) {
+  if (sourceIds.length === 0) return []
+
+  return db
+    .select({
+      sourceId: sources.id,
+      sourceName: sources.name,
+      muxPlaybackId: sources.muxPlaybackId,
+      muxBlurDataUrl: sources.muxBlurDataUrl,
+      muxBlurAspectRatio: sources.muxBlurAspectRatio,
+      videoStatus: sources.videoStatus,
+    })
+    .from(sources)
+    .where(inArray(sources.id, sourceIds))
+}
+
 export async function getSourceVideoDataByIds(sourceIds: string[]) {
   return await db
     .select({
