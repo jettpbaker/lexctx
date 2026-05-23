@@ -7,6 +7,13 @@ import { Add01Icon, ArrowUp02Icon, Folder01Icon, PlayIcon } from '@hugeicons/cor
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Button } from '~/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '~/components/ui/select'
 import { Spinner } from '~/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip'
 import {
@@ -30,6 +37,11 @@ import {
   serializeComposerForModel,
 } from '~/lib/chat/sourceMentions'
 import { cn } from '~/lib/utils'
+import {
+  CHAT_MODEL_IDS,
+  getChatModelConfig,
+  type ChatModelId,
+} from '~/server/ai/modelMapping'
 import { useMentionSourceOptions } from '~/hooks/useMentionSourceOptions'
 
 import { Context, ContextTrigger } from '../ai-elements/context'
@@ -39,6 +51,8 @@ type ChatComposerProps = {
   isSubmitPending?: boolean
   usage?: ChatUsage | PersistedChatUsage | null
   displayUsage?: boolean
+  modelId: ChatModelId
+  onModelChange: (modelId: ChatModelId) => void
   placeholder?: string
   onSubmit: (modelText: string) => void
   onStop?: () => void
@@ -50,6 +64,9 @@ export function ChatComposer({
   placeholder = 'Send follow up',
   usage,
   displayUsage = true,
+  modelId,
+  onModelChange,
+  onChange,
   onSubmit,
   onStop,
 }: ChatComposerProps) {
@@ -228,7 +245,7 @@ export function ChatComposer({
     editorRef.current?.replaceChildren()
   }, [canSubmit, modelText, onSubmit])
 
-  const maxContextTokens = 272_000
+  const maxContextTokens = getChatModelConfig(modelId).maxContextTokens
   const contextInputTokens = usage?.contextInputTokens ?? 0
   const usedContextPercent = new Intl.NumberFormat('en-US', {
     maximumFractionDigits: 0,
@@ -265,13 +282,15 @@ export function ChatComposer({
             'flex min-h-8 gap-2',
             multipleInputLines
               ? 'flex-col items-stretch justify-start px-2.5 py-2.5'
-              : 'flex-row items-center justify-center px-2 py-2 pl-3'
+              : 'flex-row items-center justify-center px-2 py-2 pl-2'
           )}
         >
           {!multipleInputLines && (
-            <Button size='icon' variant='secondary' className='hidden rounded-full' type='button'>
-              <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className='size-4.5' />
-            </Button>
+            <ChatModelSelect
+              modelId={modelId}
+              onModelChange={onModelChange}
+              disabled={isBusy}
+            />
           )}
 
           <div
@@ -377,10 +396,12 @@ export function ChatComposer({
           )}
 
           {multipleInputLines && (
-            <div className='flex w-full items-center justify-end'>
-              <Button size='icon' variant='secondary' className='hidden rounded-full' type='button'>
-                <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className='size-4.5' />
-              </Button>
+            <div className='flex w-full items-center justify-between gap-2'>
+              <ChatModelSelect
+                modelId={modelId}
+                onModelChange={onModelChange}
+                disabled={isBusy}
+              />
 
               <ComposerActionButton
                 canSubmit={canSubmit}
@@ -393,8 +414,8 @@ export function ChatComposer({
         </div>
       </form>
 
-      <div className='flex min-h-[35px] items-center justify-between px-2 py-2 text-xs text-muted-foreground'>
-        {displayUsage && (
+      {displayUsage ? (
+        <div className='flex min-h-[35px] items-center justify-between px-2 py-2 text-xs text-muted-foreground'>
           <div className='flex w-full animate-[usage-enter_260ms_var(--ease-out-cubic)_both] items-center justify-between motion-reduce:animate-none'>
             <div className='flex cursor-default items-center gap-0.5'>
               <span>$</span>
@@ -406,83 +427,15 @@ export function ChatComposer({
                 <DigitScroller value={Number(d4)} />
               </div>
             </div>
-            <div>
-              <Context maxTokens={maxContextTokens} usedTokens={contextInputTokens}>
-                <Tooltip>
-                  <TooltipTrigger render={<ContextTrigger />} />
-                  <TooltipContent>{usedContextPercent} context used</TooltipContent>
-                </Tooltip>
-              </Context>
-            </div>
+            <Context maxTokens={maxContextTokens} usedTokens={contextInputTokens}>
+              <Tooltip>
+                <TooltipTrigger render={<ContextTrigger />} />
+                <TooltipContent>{usedContextPercent} context used</TooltipContent>
+              </Tooltip>
+            </Context>
           </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function SourceMentionPopover({
-  anchor,
-  options,
-  activeIndex,
-  isLoading,
-  onSelect,
-  onHover,
-}: {
-  anchor: DOMRect
-  options: MentionOption[]
-  activeIndex: number
-  isLoading: boolean
-  onSelect: (option: MentionOption) => void
-  onHover: (index: number) => void
-}) {
-  return (
-    <div
-      className='fixed z-50 max-h-56 min-w-[16rem] max-w-[22rem] overflow-y-auto rounded-xl border border-border bg-popover p-1 shadow-md'
-      style={{
-        left: anchor.left,
-        top: anchor.top,
-        transform: 'translateY(calc(-100% - 8px))',
-      }}
-    >
-      {isLoading && options.length === 0 ? (
-        <div className='px-2 py-1 text-[11px] text-muted-foreground'>Loading sources…</div>
+        </div>
       ) : null}
-      {!isLoading && options.length === 0 ? (
-        <div className='px-2 py-1 text-[11px] text-muted-foreground'>No matching sources</div>
-      ) : null}
-      {options.map((option, index) => (
-        <button
-          key={`${option.kind}-${option.id}`}
-          type='button'
-          className={cn(
-            'flex w-full min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-left transition-colors',
-            index === activeIndex
-              ? 'bg-muted text-foreground'
-              : 'hover:bg-muted/50 dark:hover:bg-muted/40'
-          )}
-          onMouseDown={(event) => event.preventDefault()}
-          onMouseEnter={() => onHover(index)}
-          onClick={() => onSelect(option)}
-        >
-          <HugeiconsIcon
-            icon={option.kind === 'collection' ? Folder01Icon : PlayIcon}
-            strokeWidth={2.25}
-            className={cn(
-              'size-3.5 shrink-0',
-              option.kind === 'collection' ? 'text-muted-foreground' : 'text-citation'
-            )}
-          />
-          <div className='min-w-0 flex-1'>
-            <div className='truncate text-xs text-foreground'>{option.name}</div>
-            <div className='truncate text-[11px] text-muted-foreground'>
-              {option.kind === 'collection'
-                ? `Collection / ${option.name}`
-                : `${option.collectionName} / ${option.name}`}
-            </div>
-          </div>
-        </button>
-      ))}
     </div>
   )
 }

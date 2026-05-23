@@ -1,4 +1,6 @@
+import type { DeepSeekLanguageModelOptions } from '@ai-sdk/deepseek'
 import type { OpenAILanguageModelResponsesOptions } from '@ai-sdk/openai'
+import type { XaiLanguageModelResponsesOptions } from '@ai-sdk/xai'
 import type { ChatUsage } from '~/lib/types/chat'
 
 import {
@@ -22,11 +24,42 @@ import {
   emptyLanguageModelUsage,
 } from '~/server/ai/calculateChatUsage'
 import { chatTools } from '~/server/ai/tools'
+import { parseChatModelId, type ChatModelId } from '~/server/ai/modelMapping'
 
-const CHAT_MODEL_ID = 'openai/gpt-5.5'
-// const CHAT_MODEL_ID = 'deepseek/deepseek-v4-pro'
-const CHAT_MODEL = gateway(CHAT_MODEL_ID)
 const CHAT_MAX_STEPS = 12
+type ChatProviderOptions = NonNullable<Parameters<typeof streamText>[0]['providerOptions']>
+
+function getChatProviderOptions(modelId: ChatModelId, chatId: string): ChatProviderOptions | undefined {
+  if (modelId.startsWith('openai/')) {
+    return {
+      openai: {
+        reasoningEffort: 'low',
+        reasoningSummary: 'auto',
+        promptCacheKey: chatId,
+        textVerbosity: 'low',
+      } satisfies OpenAILanguageModelResponsesOptions,
+    }
+  }
+
+  if (modelId.startsWith('xai/')) {
+    return {
+      xai: {
+        reasoningEffort: 'medium',
+      } satisfies XaiLanguageModelResponsesOptions,
+    }
+  }
+
+  if (modelId.startsWith('deepseek/')) {
+    return {
+      deepseek: {
+        thinking: { type: 'adaptive' },
+        reasoningEffort: 'medium',
+      } satisfies DeepSeekLanguageModelOptions,
+    }
+  }
+
+  return undefined
+}
 
 export function gzipAsync(input: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -52,13 +85,18 @@ export function gunzipAsync(input: Buffer): Promise<string> {
   })
 }
 
-async function persistChat(chatId: string, messages: UIMessage[], usage?: ChatUsage) {
+async function persistChat(
+  chatId: string,
+  messages: UIMessage[],
+  modelId: ChatModelId,
+  usage?: ChatUsage
+) {
   const messageCount = messages.filter((message) => message.role !== 'system').length
   const messagesString = JSON.stringify(messages)
   const messagesGzip = await gzipAsync(messagesString)
   const messagesGzipBase64 = messagesGzip.toString('base64')
 
-  await upsertChat(chatId, messagesGzipBase64, messageCount, usage)
+  await upsertChat(chatId, messagesGzipBase64, messageCount, usage, modelId)
 }
 
 export type LexUIDataTypes = {
@@ -143,7 +181,8 @@ export async function loadChat(id: string): Promise<{ exists: boolean; messages:
 }
 
 export async function POST(req: Request) {
-  const { message, id, locale, timeZone } = await req.json()
+  const { message, id, locale, timeZone, modelId: requestedModelId } = await req.json()
+  const modelId = parseChatModelId(requestedModelId)
 
   const chat = await loadChat(id)
 
@@ -153,7 +192,7 @@ export async function POST(req: Request) {
     messages,
   })
 
-  await persistChat(id, validatedMessages)
+  await persistChat(id, validatedMessages, modelId)
 
   const modelMessages = await convertToModelMessages(validatedMessages)
 
@@ -171,15 +210,8 @@ export async function POST(req: Request) {
       let turnUsage = emptyLanguageModelUsage()
 
       streamResult = streamText({
-        model: CHAT_MODEL,
-        providerOptions: {
-          openai: {
-            reasoningEffort: 'low',
-            reasoningSummary: 'auto',
-            promptCacheKey: id,
-            textVerbosity: 'low',
-          } satisfies OpenAILanguageModelResponsesOptions,
-        },
+        model: gateway(modelId),
+        providerOptions: getChatProviderOptions(modelId, id),
         tools: chatTools,
         system: getSystemPrompt(timeZone, locale),
         messages: modelMessages,
@@ -189,7 +221,7 @@ export async function POST(req: Request) {
           turnUsage = addLanguageModelUsages(turnUsage, usage)
           writer.write({
             type: 'data-usage',
-            data: calculateChatUsage(turnUsage, usage.inputTokens ?? 0),
+            data: calculateChatUsage(turnUsage, usage.inputTokens ?? 0, modelId),
             transient: true,
           })
         },
@@ -211,8 +243,12 @@ export async function POST(req: Request) {
         streamResult.totalUsage,
         streamResult.usage,
       ])
-      const usage = calculateChatUsage(billingUsage, finalStepUsage.inputTokens ?? 0)
-      await persistChat(id, messages, usage)
+      const usage = calculateChatUsage(
+        billingUsage,
+        finalStepUsage.inputTokens ?? 0,
+        modelId
+      )
+      await persistChat(id, messages, modelId, usage)
     },
   })
 

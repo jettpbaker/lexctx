@@ -9,7 +9,7 @@ import MuxPlayer from '@mux/mux-player-react'
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { DefaultChatTransport, getToolName, isToolUIPart, UIMessage } from 'ai'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Conversation, ConversationContent } from '~/components/ai-elements/conversation'
 import { Message, MessageContent, MessageResponse } from '~/components/ai-elements/message'
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '~/components/ai-elements/reasoning'
@@ -31,19 +31,45 @@ import {
 } from '~/lib/chat/sourceLinks'
 import { CHAT_USAGE_KEY, CITATIONS_KEY, SOURCE_LINKS_KEY } from '~/lib/query_keys'
 import { getCitationHydrationByIds } from '~/server/actions/getCitationHydrationByIds'
+<<<<<<< HEAD
 import { getSourceLinkHydrationByIds } from '~/server/actions/getSourceLinkHydrationByIds'
+=======
+import { getChatUsageById, updateChatModelId, type ChatUsage } from '~/server/actions/sources'
+import type { ChatModelId } from '~/server/ai/modelMapping'
+>>>>>>> b75ce9a (adding model selector for 3 chosen models)
 
 export default function Chat({
   id,
   initialMessages,
   initialQuery,
+  initialModelId,
 }: {
   id: string
   initialMessages: LexMessage[]
   initialQuery?: string
+  initialModelId: ChatModelId
 }) {
   const router = useRouter()
   const queryClient = useQueryClient()
+<<<<<<< HEAD
+=======
+  const [modelId, setModelIdState] = useState(initialModelId)
+  const modelIdRef = useRef(modelId)
+  modelIdRef.current = modelId
+
+  useEffect(() => {
+    setModelIdState(initialModelId)
+  }, [id, initialModelId])
+
+  const setModelId = useCallback(
+    (nextModelId: ChatModelId) => {
+      setModelIdState(nextModelId)
+      void updateChatModelId(id, nextModelId)
+    },
+    [id]
+  )
+  const [text, setText] = useState('')
+>>>>>>> b75ce9a (adding model selector for 3 chosen models)
   const [streamingTurnUsage, setStreamingTurnUsage] = useState<ChatUsage | null>(null)
   const hasAppendedQuery = useRef(false)
 
@@ -70,6 +96,7 @@ export default function Chat({
           body: {
             id,
             message: messages.at(-1),
+            modelId: modelIdRef.current,
             locale: navigator.languages.at(0) ?? navigator.language,
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           },
@@ -258,6 +285,8 @@ export default function Chat({
           onSubmit={handleSubmit}
           onStop={stop}
           usage={displayUsage}
+          modelId={modelId}
+          onModelChange={setModelId}
         />
       </div>
     </div>

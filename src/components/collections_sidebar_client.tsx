@@ -36,6 +36,7 @@ import {
 } from '~/server/actions/collections'
 
 import { Button } from './ui/button'
+import CollectionsSidebarError from './collections_sidebar_error'
 
 type DbCollection = CollectionsWithSources[number]
 type DbSource = DbCollection['sources'][number]
@@ -62,12 +63,21 @@ export default function CollectionsSidebarClient({
     queryKey: [COLLECTIONS_WITH_SOURCES_KEY],
     queryFn: listCollectionsWithSources,
     initialData: initialCollections,
+    retry: 2,
     refetchInterval: (query) => {
+      if (query.state.error) {
+        return false
+      }
+
       const dbCollections = query.state.data ?? initialCollections
       const mergedCollections = mergeCollections(dbCollections, localSources)
       return shouldPollCollections(mergedCollections) ? 2000 : false
     },
   })
+
+  if (query.isError && !query.data) {
+    return <CollectionsSidebarError />
+  }
 
   const data = query.data
   const collections = mergeCollections(data, localSources)

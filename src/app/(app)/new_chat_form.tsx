@@ -5,15 +5,29 @@ import type { ChatSidebarItem } from '~/lib/types/chat'
 import { useQueryClient } from '@tanstack/react-query'
 import { generateId } from 'ai'
 import { useRouter } from 'next/navigation'
-import { useTransition } from 'react'
+import { useCallback, useState, useTransition } from 'react'
 import { ChatComposer } from '~/components/chat/chat_composer'
+import { chatModelClientCookieString } from '~/lib/chat_model_cookie'
 import { CHATS_KEY } from '~/lib/query_keys'
 import { generateChatTitle } from '~/server/actions/generateChatTitle'
+import { ChatType } from '~/server/actions/sources'
+import type { ChatModelId } from '~/server/ai/modelMapping'
 
-export default function NewChatForm() {
+export type ChatSidebarItem = ChatType & {
+  titleLoading: boolean
+}
+
+export default function NewChatForm({ initialModelId }: { initialModelId: ChatModelId }) {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const [modelId, setModelIdState] = useState(initialModelId)
+  const [message, setMessage] = useState('')
   const [isPending, startTransition] = useTransition()
+
+  const setModelId = useCallback((nextModelId: ChatModelId) => {
+    setModelIdState(nextModelId)
+    document.cookie = chatModelClientCookieString(nextModelId)
+  }, [])
 
   const handleSubmit = (query: string) => {
     const chatId = generateId()
@@ -37,7 +51,7 @@ export default function NewChatForm() {
         )
       })
 
-    const params = new URLSearchParams({ query })
+    const params = new URLSearchParams({ query, model: modelId })
     startTransition(() => {
       router.push(`/chat/${chatId}?${params.toString()}`)
     })
@@ -50,6 +64,8 @@ export default function NewChatForm() {
       placeholder='Enter your message'
       onSubmit={handleSubmit}
       displayUsage={false}
+      modelId={modelId}
+      onModelChange={setModelId}
     />
   )
 }
