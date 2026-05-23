@@ -13,7 +13,7 @@ import { Input } from '~/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { Spinner } from '~/components/ui/spinner'
 import { COLLECTIONS_WITH_SOURCES_KEY } from '~/lib/query_keys'
-import { createCollection } from '~/server/actions/sources'
+import { createCollection } from '~/server/actions/collections'
 
 export default function NewCollectionButton() {
   const queryClient = useQueryClient()

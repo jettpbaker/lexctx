@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from 'react'
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '~/components/ui/sidebar'
 import { useChatGenerationStore } from '~/hooks/useChatGenerationStore'
 import { CHATS_KEY } from '~/lib/query_keys'
-import { getAllChats } from '~/server/actions/sources'
+import { getAllChats } from '~/server/actions/chats'
 
 import { Shimmer } from './ai-elements/shimmer'
 import { Button } from './ui/button'

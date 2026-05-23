@@ -28,10 +28,12 @@ import { deleteCollection } from '~/server/actions/deleteCollection'
 import { deleteSource } from '~/server/actions/deleteSource'
 import {
   createPendingSources,
-  listCollectionsWithSources,
-  updateCollectionNameById,
   updateSourceNameById,
 } from '~/server/actions/sources'
+import {
+  listCollectionsWithSources,
+  updateCollectionNameById,
+} from '~/server/actions/collections'
 
 import { Button } from './ui/button'
 

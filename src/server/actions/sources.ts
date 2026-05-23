@@ -1,48 +1,14 @@
 'use server'
 
-export {
-  deleteCollectionById,
-  listAllCollections,
-  listCollectionsWithSources,
-  createCollection,
-  updateCollectionNameById,
-} from '~/db/queries/collections'
-
-export {
-  getSourceById,
-  deleteSourceById,
-  listSourcesForCollection,
-  listAllSources,
-  createPendingSources,
-  updateSourceNameById,
-  setSourceHash,
-  markSourceAudioUploaded,
-  removeSourceAudioMetadata,
-  markSourceFailed,
-  markSourceReady,
-  saveMuxUploadId,
-  saveMuxAssetId,
-  markSourceVideoReady,
-  saveMuxBlurUpPlaceholder,
-  markSourceVideoFailed,
-  saveFalRequestId,
-  saveSourceSummary,
-  getSourceIndexMetadata,
-  saveSourceTranscript,
-  getSourceVideoDataByIds,
+import {
+  createPendingSources as createPendingSourcesQuery,
+  updateSourceNameById as updateSourceNameByIdQuery,
 } from '~/db/queries/sources'
 
-export {
-  getAllChats,
-  upsertChat,
-  upsertChatTitle,
-  getChatById,
-  deleteChatById,
-  getChatUsageById,
-} from '~/db/queries/chats'
+export async function createPendingSources(collectionId: string, names: string[]) {
+  return createPendingSourcesQuery(collectionId, names)
+}
 
-export {
-  upsertRagChunks,
-  getNearbyRagChunks,
-  getCitationHydrationRowsByLookups,
-} from '~/db/queries/rag-chunks'
+export async function updateSourceNameById(id: string, name: string) {
+  return updateSourceNameByIdQuery(id, name)
+}
