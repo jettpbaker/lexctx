@@ -5,7 +5,7 @@ import type { ChatSidebarItem } from '~/lib/types/chat'
 import { useQueryClient } from '@tanstack/react-query'
 import { generateId } from 'ai'
 import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { useTransition } from 'react'
 import { ChatComposer } from '~/components/chat/chat_composer'
 import { CHATS_KEY } from '~/lib/query_keys'
 import { generateChatTitle } from '~/server/actions/generateChatTitle'
@@ -13,7 +13,6 @@ import { generateChatTitle } from '~/server/actions/generateChatTitle'
 export default function NewChatForm() {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const [message, setMessage] = useState('')
   const [isPending, startTransition] = useTransition()
 
   const handleSubmit = (query: string) => {
@@ -46,11 +45,9 @@ export default function NewChatForm() {
 
   return (
     <ChatComposer
-      value={message}
       status='ready'
       isSubmitPending={isPending}
       placeholder='Enter your message'
-      onChange={setMessage}
       onSubmit={handleSubmit}
       displayUsage={false}
     />

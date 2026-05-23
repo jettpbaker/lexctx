@@ -5,6 +5,15 @@ export type CitationLookup = {
   chunkIndex: number
 }
 
+export type HydratedSourceLink = {
+  sourceId: string
+  sourceName: string
+  muxPlaybackId: string | null
+  muxBlurDataUrl: string | null
+  muxBlurAspectRatio: number | null
+  videoStatus: VideoStatus | 'deleted'
+}
+
 export type HydratedCitation = {
   citationId: string
   sourceId: string
