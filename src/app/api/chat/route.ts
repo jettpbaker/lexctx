@@ -1,4 +1,5 @@
 import type { OpenAILanguageModelResponsesOptions } from '@ai-sdk/openai'
+import type { ChatUsage } from '~/lib/types/chat'
 
 import {
   gateway,
@@ -14,7 +15,7 @@ import {
   type StreamTextResult,
 } from 'ai'
 import { gzip, gunzip } from 'zlib'
-import { ChatUsage, getChatById, upsertChat } from '~/server/actions/sources'
+import { getChatById, upsertChat } from '~/db/queries/chats'
 import {
   addLanguageModelUsages,
   calculateChatUsage,

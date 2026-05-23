@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import CollectionsSidebarClient from '~/components/collections_sidebar_client'
 import { Sidebar, SidebarHeader } from '~/components/ui/sidebar'
 import { Spinner } from '~/components/ui/spinner'
-import { listCollectionsWithSources } from '~/server/actions/sources'
+import { listCollectionsWithSources } from '~/db/queries/collections'
 
 import NewCollectionButton from './new_collection_button'
 

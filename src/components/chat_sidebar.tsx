@@ -1,8 +1,9 @@
+import type { ChatSidebarItem } from '~/lib/types/chat'
+
 import { Add01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { ChatSidebarItem } from '~/app/(app)/new_chat_form'
 import { buttonVariants } from '~/components/ui/button'
 import {
   Sidebar,
@@ -13,8 +14,8 @@ import {
   SidebarTrigger,
 } from '~/components/ui/sidebar'
 import { Spinner } from '~/components/ui/spinner'
+import { deleteChatById, getAllChats, upsertChatTitle } from '~/db/queries/chats'
 import { cn } from '~/lib/utils'
-import { getAllChats, upsertChatTitle, deleteChatById } from '~/server/actions/sources'
 
 import ChatSidebarClient from './chat_sidebar_client'
 

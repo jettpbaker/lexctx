@@ -1,5 +1,5 @@
 import z from 'zod'
-import { getNearbyRagChunks } from '~/server/actions/sources'
+import { getNearbyRagChunks } from '~/db/queries/rag-chunks'
 
 export const getNearbyRagChunksTool = {
   description:

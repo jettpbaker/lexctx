@@ -2,6 +2,15 @@ import { fal } from '@fal-ai/client'
 import { generateText } from 'ai'
 import { sleep } from 'workflow'
 import { upsertLectureChunks } from '~/db/chroma'
+import { upsertRagChunks } from '~/db/queries/rag-chunks'
+import {
+  getSourceIndexMetadata,
+  markSourceFailed,
+  markSourceReady,
+  saveFalRequestId,
+  saveSourceSummary,
+  saveSourceTranscript,
+} from '~/db/queries/sources'
 import {
   INITIAL_TRANSCRIPTION_POLL_DELAY,
   MAX_TRANSCRIPTION_POLLS,
@@ -13,15 +22,6 @@ import {
   TranscriptSegmentForChunking,
 } from '~/lib/rag/chunkTranscriptSegments'
 import deleteSourceAudio from '~/server/actions/deleteSourceAudio'
-import {
-  getSourceIndexMetadata,
-  upsertRagChunks,
-  markSourceFailed,
-  markSourceReady,
-  saveFalRequestId,
-  saveSourceSummary,
-  saveSourceTranscript,
-} from '~/server/actions/sources'
 
 const TRANSCRIPTION_MODEL_ID = 'fal-ai/wizper'
 

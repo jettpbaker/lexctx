@@ -1,5 +1,5 @@
 import { gunzipAsync, LexMessage } from '~/app/api/chat/route'
-import { getChatById } from '~/server/actions/sources'
+import { getChatById } from '~/db/queries/chats'
 
 import Chat from '../chat'
 

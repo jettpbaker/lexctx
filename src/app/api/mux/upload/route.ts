@@ -1,7 +1,7 @@
 import Mux from '@mux/mux-node'
 import { z } from 'zod'
+import { saveMuxUploadId } from '~/db/queries/sources'
 import { env } from '~/env'
-import { saveMuxUploadId } from '~/server/actions/sources'
 
 const mux = new Mux({
   tokenId: env.MUX_TOKEN_ID,

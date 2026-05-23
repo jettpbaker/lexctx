@@ -1,5 +1,5 @@
 import z from 'zod'
-import { listAllSources, listSourcesForCollection } from '~/server/actions/sources'
+import { listAllSources, listSourcesForCollection } from '~/db/queries/sources'
 
 export const listSourcesTool = {
   description:

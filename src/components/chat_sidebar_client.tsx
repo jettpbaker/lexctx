@@ -1,6 +1,7 @@
 'use client'
 
 import type { KeyboardEvent, MouseEvent } from 'react'
+import type { ChatSidebarItem } from '~/lib/types/chat'
 
 import { Delete02Icon, Edit03Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -8,11 +9,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { ChatSidebarItem } from '~/app/(app)/new_chat_form'
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '~/components/ui/sidebar'
 import { useChatGenerationStore } from '~/hooks/useChatGenerationStore'
 import { CHATS_KEY } from '~/lib/query_keys'
-import { getAllChats } from '~/server/actions/sources'
+import { getAllChats } from '~/server/actions/chats'
 
 import { Shimmer } from './ai-elements/shimmer'
 import { Button } from './ui/button'

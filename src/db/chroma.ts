@@ -78,10 +78,7 @@ type LectureChunkSourceMetadata = {
   collectionName: string
 }
 
-export type HybridSearchFilters = {
-  sourceIds?: string[]
-  collectionIds?: string[]
-}
+import type { SourceSearchFilters } from '~/lib/types/search'
 
 export async function upsertLectureChunks(
   metadata: LectureChunkSourceMetadata,
@@ -125,7 +122,7 @@ function hybridRank(query: string) {
   return rank
 }
 
-function createWhere(filters?: HybridSearchFilters) {
+function createWhere(filters?: SourceSearchFilters) {
   const sourceIds = filters?.sourceIds?.filter(Boolean) ?? []
   const collectionIds = filters?.collectionIds?.filter(Boolean) ?? []
 
@@ -139,7 +136,7 @@ function createWhere(filters?: HybridSearchFilters) {
   return where
 }
 
-function createSearch(query: string, filters?: HybridSearchFilters) {
+function createSearch(query: string, filters?: SourceSearchFilters) {
   const where = createWhere(filters)
   const search = new Search()
     .rank(hybridRank(query))
@@ -159,7 +156,7 @@ function createSearch(query: string, filters?: HybridSearchFilters) {
   return where ? search.where(where) : search
 }
 
-export async function hybridSearch(query: string, filters?: HybridSearchFilters) {
+export async function hybridSearch(query: string, filters?: SourceSearchFilters) {
   const collection = await getLectureChunksCollection()
 
   const search = createSearch(query, filters)

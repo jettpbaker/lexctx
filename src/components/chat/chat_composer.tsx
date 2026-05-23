@@ -1,7 +1,7 @@
 'use client'
 
 import type { ChatStatus } from 'ai'
-import type { ChatUsageSummary } from '~/server/actions/sources'
+import type { ChatUsage, PersistedChatUsage } from '~/lib/types/chat'
 
 import { Add01Icon, ArrowUp02Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -17,7 +17,7 @@ type ChatComposerProps = {
   value: string
   status: ChatStatus
   isSubmitPending?: boolean
-  usage?: ChatUsageSummary
+  usage?: ChatUsage | PersistedChatUsage | null
   displayUsage?: boolean
   placeholder?: string
   onChange: (value: string) => void

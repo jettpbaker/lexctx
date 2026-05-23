@@ -1,10 +1,10 @@
 'use server'
 
 import { deleteLectureChunks } from '~/db/chroma'
+import { deleteSourceById, getSourceById } from '~/db/queries/sources'
 
 import deleteSourceAudio from './deleteSourceAudio'
 import { cancelMuxUpload, deleteSourceVideo } from './deleteVideo'
-import { deleteSourceById, getSourceById } from './sources'
 
 export async function deleteSource(sourceId: string) {
   const [source] = await getSourceById(sourceId)

@@ -1,7 +1,8 @@
 'use client'
 
 import type { LexMessage } from '~/app/api/chat/route'
-import type { HydratedCitation } from '~/server/actions/getCitationHydrationByIds'
+import type { ChatUsage } from '~/lib/types/chat'
+import type { HydratedCitation } from '~/lib/types/citations'
 
 import { useChat } from '@ai-sdk/react'
 import MuxPlayer from '@mux/mux-player-react'
@@ -17,11 +18,11 @@ import { ChatComposer } from '~/components/chat/chat_composer'
 import { CitationChip, CitationChipPending } from '~/components/chat/citation_chip'
 import { ToolStatusRow } from '~/components/chat/tool_status_row'
 import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
+import { getChatUsageById } from '~/server/actions/chats'
 import { useChatGenerationStore } from '~/hooks/useChatGenerationStore'
 import { mergeUsageForDisplay } from '~/lib/chat/mergeUsageDisplay'
 import { CHAT_USAGE_KEY, CITATIONS_KEY } from '~/lib/query_keys'
 import { getCitationHydrationByIds } from '~/server/actions/getCitationHydrationByIds'
-import { getChatUsageById, type ChatUsage } from '~/server/actions/sources'
 
 export default function Chat({
   id,

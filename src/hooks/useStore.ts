@@ -1,5 +1,6 @@
+import type { LocalSourceType } from '~/lib/types/local-pipeline'
+
 import { create } from 'zustand'
-import { LocalSourceType } from '~/lib/types'
 
 type SourceFiles = {
   video: File

@@ -2,6 +2,7 @@
 
 import type { CSSProperties, MouseEvent, ReactNode } from 'react'
 import type { KeyboardEvent } from 'react'
+import type { SourceRowAction, SourceRowSource } from '~/lib/types/ui/sources'
 
 import { Delete02Icon, Edit03Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -24,20 +25,8 @@ import {
   isVideoChipVisible,
   labelForStatus,
   type SourceUiStatus,
-  type VideoUiStatus,
 } from '~/lib/source_status'
 import { cn } from '~/lib/utils'
-
-export type SourceRowSource = {
-  id: string
-  name: string
-  fileSize: number | null
-  createdAt: Date
-  status: SourceUiStatus
-  videoStatus: VideoUiStatus
-}
-
-export type SourceRowAction = (source: SourceRowSource) => void
 
 type SourceRowProps = {
   source: SourceRowSource

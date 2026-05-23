@@ -1,14 +1,14 @@
 import { createBlurUp } from '@mux/blurup'
 import Mux from '@mux/mux-node'
 import { sleep } from 'workflow'
-import { env } from '~/env'
-import { MUX_POLL_INTERVAL, MAX_MUX_POLLS } from '~/lib/constants'
 import {
   markSourceVideoFailed,
   markSourceVideoReady,
-  saveMuxBlurUpPlaceholder,
   saveMuxAssetId,
-} from '~/server/actions/sources'
+  saveMuxBlurUpPlaceholder,
+} from '~/db/queries/sources'
+import { env } from '~/env'
+import { MUX_POLL_INTERVAL, MAX_MUX_POLLS } from '~/lib/constants'
 
 export async function pollMuxFinishedProcessing(sourceId: string, muxUploadId: string) {
   'use workflow'
