@@ -105,7 +105,7 @@ export const ContextTrigger = ({ children, className, ...props }: ContextTrigger
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+        "inline-flex cursor-pointer items-center gap-1 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
         className
       )}
       {...props}
@@ -113,7 +113,7 @@ export const ContextTrigger = ({ children, className, ...props }: ContextTrigger
       {children ?? (
         <>
           <ContextIcon />
-          <span className='cursor-default font-mono text-xs text-muted-foreground'>
+          <span className='font-mono text-xs text-muted-foreground'>
             {renderedPercent}
           </span>
         </>
