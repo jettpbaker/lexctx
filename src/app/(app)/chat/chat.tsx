@@ -21,7 +21,7 @@ import { useChatGenerationStore } from '~/hooks/useChatGenerationStore'
 import { mergeUsageForDisplay } from '~/lib/chat/mergeUsageDisplay'
 import { CHAT_USAGE_KEY, CITATIONS_KEY } from '~/lib/query_keys'
 import { getCitationHydrationByIds } from '~/server/actions/getCitationHydrationByIds'
-import { getChatUsageById, type ChatUsage } from '~/server/actions/sources'
+import { getChatUsageById, type ChatUsage } from '~/db/queries/chats'
 
 export default function Chat({
   id,

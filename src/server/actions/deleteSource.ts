@@ -4,7 +4,7 @@ import { deleteLectureChunks } from '~/db/chroma'
 
 import deleteSourceAudio from './deleteSourceAudio'
 import { cancelMuxUpload, deleteSourceVideo } from './deleteVideo'
-import { deleteSourceById, getSourceById } from './sources'
+import { deleteSourceById, getSourceById } from '~/db/queries/sources'
 
 export async function deleteSource(sourceId: string) {
   const [source] = await getSourceById(sourceId)

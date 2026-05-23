@@ -15,13 +15,13 @@ import {
 import deleteSourceAudio from '~/server/actions/deleteSourceAudio'
 import {
   getSourceIndexMetadata,
-  upsertRagChunks,
   markSourceFailed,
   markSourceReady,
   saveFalRequestId,
   saveSourceSummary,
   saveSourceTranscript,
-} from '~/server/actions/sources'
+} from '~/db/queries/sources'
+import { upsertRagChunks } from '~/db/queries/rag-chunks'
 
 const TRANSCRIPTION_MODEL_ID = 'fal-ai/wizper'
 

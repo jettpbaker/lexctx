@@ -1,7 +1,8 @@
 'use server'
 
 import { deleteSource } from './deleteSource'
-import { deleteCollectionById, listSourcesForCollection } from './sources'
+import { deleteCollectionById } from '~/db/queries/collections'
+import { listSourcesForCollection } from '~/db/queries/sources'
 
 export async function deleteCollection(collectionId: string) {
   const sources = await listSourcesForCollection(collectionId)

@@ -1,6 +1,9 @@
 'use server'
 
-import { getCitationHydrationRowsByLookups, type CitationLookup } from '~/server/actions/sources'
+import {
+  getCitationHydrationRowsByLookups,
+  type CitationLookup,
+} from '~/db/queries/rag-chunks'
 
 type CitationLookupWithId = CitationLookup & {
   citationId: string

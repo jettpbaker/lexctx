@@ -2,7 +2,7 @@
 
 import { generateText } from 'ai'
 
-import { upsertChatTitle } from './sources'
+import { upsertChatTitle } from '~/db/queries/chats'
 
 export async function generateChatTitle(chatId: string, message: string) {
   const response = await generateText({

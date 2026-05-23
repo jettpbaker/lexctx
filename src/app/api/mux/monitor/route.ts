@@ -1,6 +1,6 @@
 import { start } from 'workflow/api'
 import { z } from 'zod'
-import { getSourceById } from '~/server/actions/sources'
+import { getSourceById } from '~/db/queries/sources'
 import { pollMuxFinishedProcessing } from '~/workflows/pollMuxFinishedProcessing'
 
 const monitorUploadSchema = z.object({

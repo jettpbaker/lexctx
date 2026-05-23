@@ -6,9 +6,9 @@ import { MUX_POLL_INTERVAL, MAX_MUX_POLLS } from '~/lib/constants'
 import {
   markSourceVideoFailed,
   markSourceVideoReady,
-  saveMuxBlurUpPlaceholder,
   saveMuxAssetId,
-} from '~/server/actions/sources'
+  saveMuxBlurUpPlaceholder,
+} from '~/db/queries/sources'
 
 export async function pollMuxFinishedProcessing(sourceId: string, muxUploadId: string) {
   'use workflow'

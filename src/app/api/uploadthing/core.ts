@@ -1,7 +1,7 @@
 import { createUploadthing, type FileRouter as UploadThingFileRouter } from 'uploadthing/next'
 import { start } from 'workflow/api'
 import z from 'zod'
-import { markSourceAudioUploaded, markSourceFailed } from '~/server/actions/sources'
+import { markSourceAudioUploaded, markSourceFailed } from '~/db/queries/sources'
 import { ingestSource } from '~/workflows/ingestSource'
 
 const f = createUploadthing()

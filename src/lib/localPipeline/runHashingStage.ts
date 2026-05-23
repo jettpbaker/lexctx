@@ -1,5 +1,5 @@
 import { useSourceStore } from '~/hooks/useStore'
-import { setSourceHash } from '~/server/actions/sources'
+import { setSourceHash } from '~/db/queries/sources'
 
 import hashVideo from './media/hashVideo'
 

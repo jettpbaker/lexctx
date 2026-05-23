@@ -14,7 +14,7 @@ import {
 } from '~/components/ui/sidebar'
 import { Spinner } from '~/components/ui/spinner'
 import { cn } from '~/lib/utils'
-import { getAllChats, upsertChatTitle, deleteChatById } from '~/server/actions/sources'
+import { deleteChatById, getAllChats, upsertChatTitle } from '~/db/queries/chats'
 
 import ChatSidebarClient from './chat_sidebar_client'
 
