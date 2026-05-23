@@ -18,9 +18,10 @@ import { CitationChip, CitationChipPending } from '~/components/chat/citation_ch
 import { ToolStatusRow } from '~/components/chat/tool_status_row'
 import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
 import { useChatGenerationStore } from '~/hooks/useChatGenerationStore'
+import { mergeUsageForDisplay } from '~/lib/chat/mergeUsageDisplay'
 import { CHAT_USAGE_KEY, CITATIONS_KEY } from '~/lib/query_keys'
 import { getCitationHydrationByIds } from '~/server/actions/getCitationHydrationByIds'
-import { getChatUsageById } from '~/server/actions/sources'
+import { getChatUsageById, type ChatUsage } from '~/server/actions/sources'
 
 export default function Chat({
   id,
@@ -34,6 +35,7 @@ export default function Chat({
   const router = useRouter()
   const queryClient = useQueryClient()
   const [text, setText] = useState('')
+  const [streamingTurnUsage, setStreamingTurnUsage] = useState<ChatUsage | null>(null)
   const hasAppendedQuery = useRef(false)
 
   const chatUsageQuery = useQuery({
@@ -42,10 +44,14 @@ export default function Chat({
   })
 
   const chatUsage = chatUsageQuery.data
+  const displayUsage = useMemo(
+    () => mergeUsageForDisplay(chatUsage, streamingTurnUsage),
+    [chatUsage, streamingTurnUsage]
+  )
 
   const registerGeneration = useChatGenerationStore((state) => state.register)
 
-  const { sendMessage, messages, status, stop } = useChat({
+  const { sendMessage, messages, status, stop } = useChat<LexMessage>({
     id,
     messages: initialMessages,
     transport: new DefaultChatTransport({
@@ -61,10 +67,19 @@ export default function Chat({
         }
       },
     }),
-    onFinish({ isAbort }) {
-      if (isAbort) return
+    onData: (dataPart) => {
+      if (dataPart.type === 'data-usage') {
+        setStreamingTurnUsage(dataPart.data as ChatUsage)
+      }
+    },
+    onFinish: async ({ isAbort }) => {
+      if (isAbort) {
+        setStreamingTurnUsage(null)
+        return
+      }
 
-      queryClient.invalidateQueries({ queryKey: [CHAT_USAGE_KEY, id] })
+      await queryClient.refetchQueries({ queryKey: [CHAT_USAGE_KEY, id] })
+      setStreamingTurnUsage(null)
       router.refresh()
     },
   })
@@ -198,7 +213,7 @@ export default function Chat({
           onChange={setText}
           onSubmit={handleSubmit}
           onStop={stop}
-          usage={chatUsage}
+          usage={displayUsage}
         />
       </div>
     </div>
