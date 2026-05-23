@@ -2,6 +2,8 @@
 
 import {
   createPendingSources as createPendingSourcesQuery,
+  markSourceFailed as markSourceFailedQuery,
+  setSourceHash as setSourceHashQuery,
   updateSourceNameById as updateSourceNameByIdQuery,
 } from '~/db/queries/sources'
 
@@ -11,4 +13,12 @@ export async function createPendingSources(collectionId: string, names: string[]
 
 export async function updateSourceNameById(id: string, name: string) {
   return updateSourceNameByIdQuery(id, name)
+}
+
+export async function setSourceHash(id: string, hash: string, fileSize: number) {
+  return setSourceHashQuery(id, hash, fileSize)
+}
+
+export async function markSourceFailed(id: string, error: string) {
+  return markSourceFailedQuery(id, error)
 }
