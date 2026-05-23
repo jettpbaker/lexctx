@@ -1,4 +1,3 @@
-import type { DeepSeekLanguageModelOptions } from '@ai-sdk/deepseek'
 import type { OpenAILanguageModelResponsesOptions } from '@ai-sdk/openai'
 import type { XaiLanguageModelResponsesOptions } from '@ai-sdk/xai'
 import type { ChatUsage } from '~/lib/types/chat'
@@ -30,6 +29,14 @@ const CHAT_MAX_STEPS = 12
 type ChatProviderOptions = NonNullable<Parameters<typeof streamText>[0]['providerOptions']>
 
 function getChatProviderOptions(modelId: ChatModelId, chatId: string): ChatProviderOptions | undefined {
+  if (modelId.startsWith('anthropic/')) {
+    return {
+      gateway: {
+        caching: 'auto',
+      },
+    }
+  }
+
   if (modelId.startsWith('openai/')) {
     return {
       openai: {
@@ -46,15 +53,6 @@ function getChatProviderOptions(modelId: ChatModelId, chatId: string): ChatProvi
       xai: {
         reasoningEffort: 'medium',
       } satisfies XaiLanguageModelResponsesOptions,
-    }
-  }
-
-  if (modelId.startsWith('deepseek/')) {
-    return {
-      deepseek: {
-        thinking: { type: 'adaptive' },
-        reasoningEffort: 'medium',
-      } satisfies DeepSeekLanguageModelOptions,
     }
   }
 

@@ -96,7 +96,7 @@ export function ChatUsagePopoverPanel({
           </span>
         </div>
         <div className='flex items-center justify-between gap-3 text-xs text-muted-foreground'>
-          <span>{formatPercent(usedPercent)}</span>
+          <span className='font-mono tabular-nums'>{formatPercent(usedPercent)}</span>
           <span className='tabular-nums'>
             <span className='font-mono'>{formatCompact(contextInputTokens)}</span>
             {' / '}

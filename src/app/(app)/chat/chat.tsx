@@ -19,9 +19,10 @@ import { CitationChip, CitationChipPending, citationNotReadyTooltip } from '~/co
 import { SourceLinkChip } from '~/components/chat/source_link_chip'
 import { ToolStatusRow } from '~/components/chat/tool_status_row'
 import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
-import { getChatUsageById } from '~/server/actions/chats'
+import { getChatUsageById, updateChatModelId } from '~/server/actions/chats'
 import { useChatGenerationStore } from '~/hooks/useChatGenerationStore'
 import { mergeUsageForDisplay } from '~/lib/chat/mergeUsageDisplay'
+import { lastUsedChatModelClientCookieString } from '~/lib/chat_model_cookie'
 import { hydratedSourceLinkToCitation } from '~/lib/chat/sourceLinkPlayback'
 import {
   isCollectionLinkHref,
@@ -31,12 +32,8 @@ import {
 } from '~/lib/chat/sourceLinks'
 import { CHAT_USAGE_KEY, CITATIONS_KEY, SOURCE_LINKS_KEY } from '~/lib/query_keys'
 import { getCitationHydrationByIds } from '~/server/actions/getCitationHydrationByIds'
-<<<<<<< HEAD
 import { getSourceLinkHydrationByIds } from '~/server/actions/getSourceLinkHydrationByIds'
-=======
-import { getChatUsageById, updateChatModelId, type ChatUsage } from '~/server/actions/sources'
 import type { ChatModelId } from '~/server/ai/modelMapping'
->>>>>>> b75ce9a (adding model selector for 3 chosen models)
 
 export default function Chat({
   id,
@@ -51,8 +48,6 @@ export default function Chat({
 }) {
   const router = useRouter()
   const queryClient = useQueryClient()
-<<<<<<< HEAD
-=======
   const [modelId, setModelIdState] = useState(initialModelId)
   const modelIdRef = useRef(modelId)
   modelIdRef.current = modelId
@@ -64,12 +59,11 @@ export default function Chat({
   const setModelId = useCallback(
     (nextModelId: ChatModelId) => {
       setModelIdState(nextModelId)
+      document.cookie = lastUsedChatModelClientCookieString(nextModelId)
       void updateChatModelId(id, nextModelId)
     },
     [id]
   )
-  const [text, setText] = useState('')
->>>>>>> b75ce9a (adding model selector for 3 chosen models)
   const [streamingTurnUsage, setStreamingTurnUsage] = useState<ChatUsage | null>(null)
   const hasAppendedQuery = useRef(false)
 

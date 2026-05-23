@@ -1,0 +1,1 @@
+ALTER TABLE "chats" ALTER COLUMN "model_id" SET DEFAULT 'xai/grok-4.3';

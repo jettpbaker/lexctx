@@ -15,6 +15,7 @@ import {
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '~/components/ai-elements/reasoning'
 import { CitationChip, CitationChipPending } from '~/components/chat/citation_chip'
 import { ChatUsagePopoverPanel } from '~/components/chat/chat_usage_popover'
+import { ModelPickerProviderTabsGallery } from '~/app/styleguide/model_picker_provider_tabs_gallery'
 import { ToolStatusRow } from '~/components/chat/tool_status_row'
 import { toolUiMapping } from '~/components/chat/toolUiMapping'
 import { CollectionGroup } from '~/components/sources/collection_group'
@@ -137,7 +138,7 @@ export default function StyleguidePage() {
 
       <Section
         title='Chat usage popover'
-        description='Token mix uses custom lilac (#B389F3), rose (#F289A0), and sky (#68CDF2). Static panels for tuning breakdown rows and cost across usage levels.'
+        description='Token mix uses custom lilac, rose, and sky (oklch, exact conversions from the original hex swatches). Static panels for tuning breakdown rows and cost across usage levels.'
       >
         <div className='grid gap-6 md:grid-cols-2 xl:grid-cols-3'>
           {CHAT_USAGE_POPOVER_GALLERY.map((entry) => (
@@ -151,6 +152,13 @@ export default function StyleguidePage() {
             </div>
           ))}
         </div>
+      </Section>
+
+      <Section
+        title='Model picker'
+        description='Provider pill tabs with animated model list, using the settled chat models in price order.'
+      >
+        <ModelPickerProviderTabsGallery />
       </Section>
 
       <Section

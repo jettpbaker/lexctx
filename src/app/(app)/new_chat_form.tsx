@@ -7,26 +7,20 @@ import { generateId } from 'ai'
 import { useRouter } from 'next/navigation'
 import { useCallback, useState, useTransition } from 'react'
 import { ChatComposer } from '~/components/chat/chat_composer'
-import { chatModelClientCookieString } from '~/lib/chat_model_cookie'
+import { lastUsedChatModelClientCookieString } from '~/lib/chat_model_cookie'
 import { CHATS_KEY } from '~/lib/query_keys'
 import { generateChatTitle } from '~/server/actions/generateChatTitle'
-import { ChatType } from '~/server/actions/sources'
 import type { ChatModelId } from '~/server/ai/modelMapping'
-
-export type ChatSidebarItem = ChatType & {
-  titleLoading: boolean
-}
 
 export default function NewChatForm({ initialModelId }: { initialModelId: ChatModelId }) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [modelId, setModelIdState] = useState(initialModelId)
-  const [message, setMessage] = useState('')
   const [isPending, startTransition] = useTransition()
 
   const setModelId = useCallback((nextModelId: ChatModelId) => {
     setModelIdState(nextModelId)
-    document.cookie = chatModelClientCookieString(nextModelId)
+    document.cookie = lastUsedChatModelClientCookieString(nextModelId)
   }, [])
 
   const handleSubmit = (query: string) => {

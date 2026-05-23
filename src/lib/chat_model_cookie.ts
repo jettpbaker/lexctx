@@ -5,11 +5,11 @@ import {
   type ChatModelId,
 } from '~/server/ai/modelMapping'
 
-/** Cookie value is the gateway model id, e.g. `openai/gpt-5.5`. */
-export const CHAT_MODEL_COOKIE_NAME = 'chat_model_id'
-export const CHAT_MODEL_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
+/** Cookie value is the last-used gateway model id, e.g. `openai/gpt-5.5`. */
+export const LAST_USED_CHAT_MODEL_COOKIE_NAME = 'last_used_chat_model_id'
+export const LAST_USED_CHAT_MODEL_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 
-export function parseChatModelCookieValue(value: string | undefined): ChatModelId {
+export function parseLastUsedChatModelCookieValue(value: string | undefined): ChatModelId {
   if (!value) {
     return DEFAULT_CHAT_MODEL_ID
   }
@@ -26,6 +26,6 @@ export function parseChatModelCookieValue(value: string | undefined): ChatModelI
   return parseChatModelId(value)
 }
 
-export function chatModelClientCookieString(modelId: ChatModelId): string {
-  return `${CHAT_MODEL_COOKIE_NAME}=${encodeURIComponent(modelId)}; path=/; max-age=${CHAT_MODEL_COOKIE_MAX_AGE}; samesite=lax`
+export function lastUsedChatModelClientCookieString(modelId: ChatModelId): string {
+  return `${LAST_USED_CHAT_MODEL_COOKIE_NAME}=${encodeURIComponent(modelId)}; path=/; max-age=${LAST_USED_CHAT_MODEL_COOKIE_MAX_AGE}; samesite=lax`
 }
