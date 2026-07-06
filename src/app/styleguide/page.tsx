@@ -21,6 +21,7 @@ import { toolUiMapping } from '~/components/chat/toolUiMapping'
 import { CollectionGroup } from '~/components/sources/collection_group'
 import { SourceRow } from '~/components/sources/source_row'
 import { Button } from '~/components/ui/button'
+import { citationId } from '~/lib/chat/citationLinks'
 
 const TOOL_NAMES = Object.keys(toolUiMapping) as Array<keyof typeof toolUiMapping>
 const TOOL_STATES = ['in-flight', 'completed', 'error'] as const
@@ -242,7 +243,7 @@ function DemoFrame({
 }
 
 const HYDRATED_DEMO_CITATION: HydratedCitation = {
-  citationId: 'demo-source:chunk:0',
+  citationId: citationId('demo-source', 0),
   sourceId: 'demo-source',
   sourceName: 'cs50-10m-aac.mp4',
   collectionId: 'demo-collection',

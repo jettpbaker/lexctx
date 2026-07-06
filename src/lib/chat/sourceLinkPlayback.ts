@@ -1,8 +1,10 @@
 import type { HydratedCitation, HydratedSourceLink } from '~/lib/types/citations'
 
+import { citationId } from '~/lib/chat/citationLinks'
+
 export function hydratedSourceLinkToCitation(source: HydratedSourceLink): HydratedCitation {
   return {
-    citationId: `${source.sourceId}:chunk:0`,
+    citationId: citationId(source.sourceId, 0),
     sourceId: source.sourceId,
     sourceName: source.sourceName,
     collectionId: '',

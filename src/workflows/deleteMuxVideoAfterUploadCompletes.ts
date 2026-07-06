@@ -1,7 +1,6 @@
-import Mux from '@mux/mux-node'
 import { sleep } from 'workflow'
-import { env } from '~/env'
 import { MAX_MUX_DELETE_CLEANUP_POLLS, MUX_DELETE_CLEANUP_POLL_INTERVAL } from '~/lib/constants'
+import { createMuxClient } from '~/server/mux'
 
 export async function deleteMuxVideoAfterUploadCompletes(muxUploadId: string) {
   'use workflow'
@@ -26,13 +25,6 @@ export async function deleteMuxVideoAfterUploadCompletes(muxUploadId: string) {
   }
 
   await logMuxCleanupTimedOut(muxUploadId)
-}
-
-function createMuxClient() {
-  return new Mux({
-    tokenId: env.MUX_TOKEN_ID,
-    tokenSecret: env.MUX_TOKEN_SECRET,
-  })
 }
 
 async function getMuxUpload(muxUploadId: string) {

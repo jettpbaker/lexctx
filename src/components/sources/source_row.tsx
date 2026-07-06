@@ -1,7 +1,6 @@
 'use client'
 
 import type { CSSProperties, MouseEvent, ReactNode } from 'react'
-import type { KeyboardEvent } from 'react'
 import type { SourceRowAction, SourceRowSource } from '~/lib/types/ui/sources'
 
 import { Delete02Icon, Edit03Icon } from '@hugeicons/core-free-icons'
@@ -19,6 +18,7 @@ import {
   PopoverTrigger,
 } from '~/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip'
+import { useInlineRename } from '~/hooks/useInlineRename'
 import {
   isLocalStage,
   isRemoteStage,
@@ -35,15 +35,14 @@ type SourceRowProps = {
 }
 
 export function SourceRow({ source, onEdit, onDelete }: SourceRowProps) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [sourceName, setSourceName] = useState(source.name)
   const [showSuccessSweep, setShowSuccessSweep] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
-  const editInput = useRef<HTMLInputElement>(null)
-  const cancelEditRef = useRef(false)
-
   const previousStatus = useRef(source.status.kind)
+  const rename = useInlineRename({
+    value: source.name,
+    onCommit: (name) => onEdit?.(source, name),
+  })
 
   const { status, videoStatus } = source
   const failed = status.kind === 'failed'
@@ -65,54 +64,6 @@ export function SourceRow({ source, onEdit, onDelete }: SourceRowProps) {
     onDelete?.(source)
   }
 
-  function startEditing() {
-    cancelEditRef.current = false
-    setIsEditing(true)
-  }
-
-  function commitEdit() {
-    if (cancelEditRef.current) {
-      cancelEditRef.current = false
-      return
-    }
-
-    const trimmedName = sourceName.trim()
-    setIsEditing(false)
-
-    if (trimmedName.length === 0) {
-      setSourceName(source.name)
-      return
-    }
-
-    setSourceName(trimmedName)
-
-    if (trimmedName !== source.name) {
-      onEdit?.(source, trimmedName)
-    }
-  }
-
-  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') {
-      e.currentTarget.blur()
-    } else if (e.key === 'Escape') {
-      cancelEditRef.current = true
-      setIsEditing(false)
-      setSourceName(source.name)
-      e.currentTarget.blur()
-    }
-  }
-
-  useEffect(() => {
-    setSourceName(source.name)
-  }, [source.name])
-
-  useEffect(() => {
-    if (isEditing && editInput.current) {
-      editInput.current.focus()
-      editInput.current.select()
-    }
-  }, [isEditing])
-
   return (
     <>
       <div className='relative'>
@@ -133,20 +84,23 @@ export function SourceRow({ source, onEdit, onDelete }: SourceRowProps) {
         >
           <div className='flex w-full items-center gap-2 px-3 py-2'>
             <span
-              className={cn('min-w-0 flex-1 truncate text-xs font-medium', isEditing && 'hidden')}
+              className={cn(
+                'min-w-0 flex-1 truncate text-xs font-medium',
+                rename.isEditing && 'hidden'
+              )}
             >
-              {sourceName}
+              {rename.draft}
             </span>
 
             <input
-              ref={editInput}
-              value={sourceName}
-              onChange={(e) => setSourceName(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onBlur={commitEdit}
+              ref={rename.inputRef}
+              value={rename.draft}
+              onChange={(e) => rename.setDraft(e.target.value)}
+              onKeyDown={rename.handleKeyDown}
+              onBlur={() => void rename.handleBlur()}
               className={cn(
                 'min-w-0 flex-1 truncate text-xs font-medium focus:ring-0 focus:outline-none',
-                !isEditing && 'hidden'
+                !rename.isEditing && 'hidden'
               )}
             />
 
@@ -159,7 +113,7 @@ export function SourceRow({ source, onEdit, onDelete }: SourceRowProps) {
                 <Popover open={deleteOpen} onOpenChange={setDeleteOpen}>
                   <SourceActions
                     source={source}
-                    onEdit={startEditing}
+                    onEdit={rename.startEditing}
                     deleteTrigger={
                       <PopoverTrigger
                         render={

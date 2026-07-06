@@ -186,22 +186,33 @@ const restoreSourceSnapshot = (
   }
 }
 
-const markHashingStarted = (
+type QueueKey = 'hashQueue' | 'extractQueue' | 'audioUploadQueue' | 'videoUploadQueue'
+type ActiveKey = keyof ActiveType
+type StatusKey = 'audioStatus' | 'videoStatus'
+
+const dequeueAndStart = (
+  state: SourceStore,
   id: string,
-  sources: Record<string, LocalSourceType>,
-  active: ActiveType,
-  queue: string[]
-): Partial<SourceStore> => ({
-  hashQueue: queue.filter((sourceId) => sourceId !== id),
-  active: { ...active, hashing: id },
-  sources: {
-    ...sources,
-    [id]: {
-      ...sources[id],
-      audioStatus: { stage: 'hashing', progress: 0 },
+  queueKey: QueueKey,
+  activeKey: ActiveKey,
+  statusKey: StatusKey,
+  stage: string
+): Partial<SourceStore> => {
+  const source = state.sources[id]
+  if (!source) return {}
+
+  return {
+    [queueKey]: state[queueKey].filter((sourceId) => sourceId !== id),
+    active: { ...state.active, [activeKey]: id },
+    sources: {
+      ...state.sources,
+      [id]: {
+        ...source,
+        [statusKey]: { stage, progress: 0 },
+      },
     },
-  },
-})
+  }
+}
 
 const markHashingCompleted = (
   id: string,
@@ -219,30 +230,6 @@ const markHashingCompleted = (
       [id]: {
         ...sources[id],
         audioStatus: { stage: 'extraction-queued' },
-      },
-    },
-  }
-}
-
-const markExtractionStarted = (
-  id: string,
-  sources: Record<string, LocalSourceType>,
-  active: ActiveType,
-  queue: string[]
-): Partial<SourceStore> => {
-  if (!sources[id]) return {}
-
-  return {
-    extractQueue: queue.filter((sourceId) => sourceId !== id),
-    active: {
-      ...active,
-      extracting: id,
-    },
-    sources: {
-      ...sources,
-      [id]: {
-        ...sources[id],
-        audioStatus: { stage: 'extracting', progress: 0 },
       },
     },
   }
@@ -273,27 +260,6 @@ const markExtractionCompleted = (
       [id]: {
         ...sources[id],
         audioStatus: { stage: 'upload-queued' },
-      },
-    },
-  }
-}
-
-const markAudioUploadStarted = (
-  id: string,
-  sources: Record<string, LocalSourceType>,
-  active: ActiveType,
-  queue: string[]
-): Partial<SourceStore> => {
-  if (!sources[id]) return {}
-
-  return {
-    audioUploadQueue: queue.filter((sourceId) => sourceId !== id),
-    active: { ...active, audioUploading: id },
-    sources: {
-      ...sources,
-      [id]: {
-        ...sources[id],
-        audioStatus: { stage: 'uploading', progress: 0 },
       },
     },
   }
@@ -360,27 +326,6 @@ const markAudioPipelineFailed = (
   }
 }
 
-const markVideoUploadStarted = (
-  id: string,
-  sources: Record<string, LocalSourceType>,
-  active: ActiveType,
-  queue: string[]
-): Partial<SourceStore> => {
-  if (!sources[id]) return {}
-
-  return {
-    videoUploadQueue: queue.filter((sourceId) => sourceId !== id),
-    active: { ...active, videoUploading: id },
-    sources: {
-      ...sources,
-      [id]: {
-        ...sources[id],
-        videoStatus: { stage: 'uploading', progress: 0 },
-      },
-    },
-  }
-}
-
 const markVideoUploadCompleted = (
   id: string,
   sources: Record<string, LocalSourceType>,
@@ -441,99 +386,27 @@ const markVideoPipelineFailed = (
     files: restFiles,
   }
 }
-const updateHashingProgress = (
+const updateProgress = (
+  state: SourceStore,
   id: string,
-  progress: number,
-  sources: Record<string, LocalSourceType>
+  statusKey: StatusKey,
+  stage: string,
+  progress: number
 ): Partial<SourceStore> => {
-  const source = sources[id]
+  const source = state.sources[id]
+  const status = source?.[statusKey]
 
-  if (!source || source.audioStatus.stage !== 'hashing') {
+  if (!source || !status || status.stage !== stage) {
     return {}
   }
 
   return {
     sources: {
-      ...sources,
+      ...state.sources,
       [id]: {
         ...source,
-        audioStatus: {
-          ...source.audioStatus,
-          progress,
-        },
-      },
-    },
-  }
-}
-
-const updateExtractionProgress = (
-  id: string,
-  progress: number,
-  sources: Record<string, LocalSourceType>
-): Partial<SourceStore> => {
-  const source = sources[id]
-
-  if (!source || source.audioStatus.stage !== 'extracting') {
-    return {}
-  }
-
-  return {
-    sources: {
-      ...sources,
-      [id]: {
-        ...source,
-        audioStatus: {
-          ...source.audioStatus,
-          progress,
-        },
-      },
-    },
-  }
-}
-
-const updateAudioUploadProgress = (
-  id: string,
-  progress: number,
-  sources: Record<string, LocalSourceType>
-): Partial<SourceStore> => {
-  const source = sources[id]
-
-  if (!source || source.audioStatus.stage !== 'uploading') {
-    return {}
-  }
-
-  return {
-    sources: {
-      ...sources,
-      [id]: {
-        ...source,
-        audioStatus: {
-          ...source.audioStatus,
-          progress,
-        },
-      },
-    },
-  }
-}
-
-const updateVideoUploadProgress = (
-  id: string,
-  progress: number,
-  sources: Record<string, LocalSourceType>
-): Partial<SourceStore> => {
-  const source = sources[id]
-
-  if (!source || source.videoStatus.stage !== 'uploading') {
-    return {}
-  }
-
-  return {
-    sources: {
-      ...sources,
-      [id]: {
-        ...source,
-        videoStatus: {
-          ...source.videoStatus,
+        [statusKey]: {
+          ...status,
           progress,
         },
       },
@@ -600,14 +473,16 @@ export const useSourceStore = create<SourceStore>()((set, get) => ({
   renameSource: (sourceId, name) => set((state) => renameSource(state.sources, sourceId, name)),
 
   markHashingStarted: (id) =>
-    set((state) => markHashingStarted(id, state.sources, state.active, state.hashQueue)),
+    set((state) => dequeueAndStart(state, id, 'hashQueue', 'hashing', 'audioStatus', 'hashing')),
   markHashingCompleted: (id) =>
     set((state) => markHashingCompleted(id, state.sources, state.active, state.extractQueue)),
   updateHashingProgress: (id, progress) =>
-    set((state) => updateHashingProgress(id, progress, state.sources)),
+    set((state) => updateProgress(state, id, 'audioStatus', 'hashing', progress)),
 
   markExtractionStarted: (id) =>
-    set((state) => markExtractionStarted(id, state.sources, state.active, state.extractQueue)),
+    set((state) =>
+      dequeueAndStart(state, id, 'extractQueue', 'extracting', 'audioStatus', 'extracting')
+    ),
   markExtractionCompleted: (id, audio) =>
     set((state) =>
       markExtractionCompleted(
@@ -621,7 +496,9 @@ export const useSourceStore = create<SourceStore>()((set, get) => ({
     ),
 
   markAudioUploadStarted: (id) =>
-    set((state) => markAudioUploadStarted(id, state.sources, state.active, state.audioUploadQueue)),
+    set((state) =>
+      dequeueAndStart(state, id, 'audioUploadQueue', 'audioUploading', 'audioStatus', 'uploading')
+    ),
   markAudioUploadCompleted: (id) =>
     set((state) =>
       markAudioUploadCompleted(id, state.sources, state.active, state.videoUploadQueue)
@@ -641,16 +518,18 @@ export const useSourceStore = create<SourceStore>()((set, get) => ({
     ),
 
   markVideoUploadStarted: (id) =>
-    set((state) => markVideoUploadStarted(id, state.sources, state.active, state.videoUploadQueue)),
+    set((state) =>
+      dequeueAndStart(state, id, 'videoUploadQueue', 'videoUploading', 'videoStatus', 'uploading')
+    ),
   markVideoUploadCompleted: (id) =>
     set((state) => markVideoUploadCompleted(id, state.sources, state.active, state.files)),
   markVideoPipelineFailed: (id, error) =>
     set((state) => markVideoPipelineFailed(id, error, state.sources, state.files, state.active)),
 
   updateExtractionProgress: (id, progress) =>
-    set((state) => updateExtractionProgress(id, progress, state.sources)),
+    set((state) => updateProgress(state, id, 'audioStatus', 'extracting', progress)),
   updateAudioUploadProgress: (id, progress) =>
-    set((state) => updateAudioUploadProgress(id, progress, state.sources)),
+    set((state) => updateProgress(state, id, 'audioStatus', 'uploading', progress)),
   updateVideoUploadProgress: (id, progress) =>
-    set((state) => updateVideoUploadProgress(id, progress, state.sources)),
+    set((state) => updateProgress(state, id, 'videoStatus', 'uploading', progress)),
 }))

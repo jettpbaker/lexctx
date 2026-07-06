@@ -1,6 +1,6 @@
 'use client'
 
-import type { ChangeEvent, DragEvent, KeyboardEvent } from 'react'
+import type { ChangeEvent, DragEvent } from 'react'
 import type {
   CollectionGroupCollection,
   SourceRowAction,
@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
 import { Spinner } from '~/components/ui/spinner'
+import { useInlineRename } from '~/hooks/useInlineRename'
 import { MAX_FILES_PER_UPLOAD } from '~/lib/constants'
 import { type CollectionStatusSummary, summarizeStatuses } from '~/lib/source_status'
 import { cn } from '~/lib/utils'
@@ -64,13 +65,13 @@ export function CollectionGroup({
 }: CollectionGroupProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [open, setOpen] = useState(defaultOpen)
-  const [isEditingName, setIsEditingName] = useState(false)
-  const [collectionName, setCollectionName] = useState(collection.name)
   const summary = summarizeStatuses(collection.sources.map((s) => s.status))
 
   const inputRef = useRef<HTMLInputElement | null>(null)
-  const editInputRef = useRef<HTMLInputElement | null>(null)
-  const cancelEditRef = useRef(false)
+  const rename = useInlineRename({
+    value: collection.name,
+    onCommit: (name) => onEditCollection?.(collection, name),
+  })
 
   function handleFilesSelected(e: ChangeEvent<HTMLInputElement>) {
     const input = e.currentTarget
@@ -92,59 +93,11 @@ export function CollectionGroup({
     onAddSources?.(collection, files)
   }
 
-  function startEditingName() {
-    cancelEditRef.current = false
-    setIsEditingName(true)
-  }
-
-  function commitNameEdit() {
-    if (cancelEditRef.current) {
-      cancelEditRef.current = false
-      return
-    }
-
-    const trimmedName = collectionName.trim()
-    setIsEditingName(false)
-
-    if (trimmedName.length === 0) {
-      setCollectionName(collection.name)
-      return
-    }
-
-    setCollectionName(trimmedName)
-
-    if (trimmedName !== collection.name) {
-      onEditCollection?.(collection, trimmedName)
-    }
-  }
-
-  function handleNameKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') {
-      e.currentTarget.blur()
-    } else if (e.key === 'Escape') {
-      cancelEditRef.current = true
-      setIsEditingName(false)
-      setCollectionName(collection.name)
-      e.currentTarget.blur()
-    }
-  }
-
-  useEffect(() => {
-    setCollectionName(collection.name)
-  }, [collection.name])
-
   useEffect(() => {
     if (isSearching) {
       setOpen(true)
     }
   }, [isSearching])
-
-  useEffect(() => {
-    if (isEditingName && editInputRef.current) {
-      editInputRef.current.focus()
-      editInputRef.current.select()
-    }
-  }, [isEditingName])
 
   return (
     <section className='flex flex-col overflow-clip rounded-lg border border-border bg-background'>
@@ -155,7 +108,7 @@ export function CollectionGroup({
         )}
       >
         <div className='flex min-w-0 flex-1 items-center gap-1.5 rounded-tl-lg px-2'>
-          {isEditingName ? (
+          {rename.isEditing ? (
             <>
               <HugeiconsIcon
                 icon={ArrowDown01Icon}
@@ -166,11 +119,11 @@ export function CollectionGroup({
                 )}
               />
               <input
-                ref={editInputRef}
-                value={collectionName}
-                onChange={(e) => setCollectionName(e.target.value)}
-                onKeyDown={handleNameKeyDown}
-                onBlur={commitNameEdit}
+                ref={rename.inputRef}
+                value={rename.draft}
+                onChange={(e) => rename.setDraft(e.target.value)}
+                onKeyDown={rename.handleKeyDown}
+                onBlur={() => void rename.handleBlur()}
                 className='min-w-0 flex-1 truncate text-xs font-semibold tracking-tight focus:ring-0 focus:outline-none'
               />
             </>
@@ -191,7 +144,7 @@ export function CollectionGroup({
                 )}
               />
               <h2 className='min-w-0 flex-1 truncate text-xs font-semibold tracking-tight'>
-                {collectionName}
+                {rename.draft}
               </h2>
             </button>
           )}
@@ -251,7 +204,7 @@ export function CollectionGroup({
               }
             />
             <DropdownMenuContent align='end'>
-              <DropdownMenuItem onClick={startEditingName}>
+              <DropdownMenuItem onClick={rename.startEditing}>
                 <HugeiconsIcon icon={Edit03Icon} strokeWidth={2} />
                 Edit
               </DropdownMenuItem>

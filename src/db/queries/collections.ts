@@ -75,5 +75,4 @@ export async function updateCollectionNameById(id: string, name: string) {
     .update(collections)
     .set({ name: trimmedName })
     .where(eq(collections.id, id))
-    .returning({ id: collections.id, name: collections.name })
 }

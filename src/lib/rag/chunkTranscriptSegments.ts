@@ -64,6 +64,7 @@ export function chunkTranscriptSegments(segments: TranscriptSegmentForChunking[]
   const chunks: RagChunk[] = []
   let currentSegments: TranscriptSegmentForChunking[] = []
   let currentWordCount = 0
+  let hasNewSegments = false
 
   for (const segment of segments) {
     const segmentWordCount = countWords(segment.text)
@@ -75,10 +76,12 @@ export function chunkTranscriptSegments(segments: TranscriptSegmentForChunking[]
         (total, segment) => total + countWords(segment.text),
         0
       )
+      hasNewSegments = false
     }
 
     currentSegments.push(segment)
     currentWordCount += countWords(segment.text)
+    hasNewSegments = true
 
     if (currentWordCount >= TARGET_RAG_CHUNK_WORDS) {
       chunks.push(createChunk(chunks.length, currentSegments))
@@ -87,10 +90,11 @@ export function chunkTranscriptSegments(segments: TranscriptSegmentForChunking[]
         (total, segment) => total + countWords(segment.text),
         0
       )
+      hasNewSegments = false
     }
   }
 
-  if (currentSegments.length > 0) {
+  if (currentSegments.length > 0 && hasNewSegments) {
     chunks.push(createChunk(chunks.length, currentSegments))
   }
 

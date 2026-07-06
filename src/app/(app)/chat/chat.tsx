@@ -1,6 +1,5 @@
 'use client'
 
-import type { LexMessage } from '~/app/api/chat/route'
 import type { ChatUsage } from '~/lib/types/chat'
 import type { HydratedCitation, HydratedSourceLink } from '~/lib/types/citations'
 import type { ComponentProps } from 'react'
@@ -34,6 +33,11 @@ import { ToolStatusRow } from '~/components/chat/tool_status_row'
 import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
 import { getChatUsageById, updateChatModelId } from '~/server/actions/chats'
 import { useChatGenerationStore } from '~/hooks/useChatGenerationStore'
+import {
+  citationIdFromHref,
+  isCitationLinkHref,
+  parseCitationIdsFromMarkdown,
+} from '~/lib/chat/citationLinks'
 import { mergeUsageForDisplay } from '~/lib/chat/mergeUsageDisplay'
 import { lastUsedChatModelClientCookieString } from '~/lib/chat_model_cookie'
 import { hydratedSourceLinkToCitation } from '~/lib/chat/sourceLinkPlayback'
@@ -44,13 +48,13 @@ import {
   sourceIdFromHref,
 } from '~/lib/chat/sourceLinks'
 import { CHAT_USAGE_KEY, CITATIONS_KEY, SOURCE_LINKS_KEY } from '~/lib/query_keys'
+import { isVideoInFlight } from '~/lib/types/citations'
 import { getCitationHydrationByIds } from '~/server/actions/getCitationHydrationByIds'
 import { getSourceLinkHydrationByIds } from '~/server/actions/getSourceLinkHydrationByIds'
 import type { ChatModelId } from '~/server/ai/modelMapping'
+import type { LexMessage } from '~/server/chat/store'
 
 const MuxPlayer = dynamic(() => import('@mux/mux-player-react'), { ssr: false })
-
-const citationHrefRegex = /\]\(#citation-([^)]+)\)/g
 
 function parseCitationIdsFromMessages(messages: UIMessage[]) {
   const ids: string[] = []
@@ -58,10 +62,7 @@ function parseCitationIdsFromMessages(messages: UIMessage[]) {
   messages.forEach((message) => {
     message.parts.forEach((part) => {
       if (part.type !== 'text') return
-
-      for (const match of part.text.matchAll(citationHrefRegex)) {
-        ids.push(match[1])
-      }
+      ids.push(...parseCitationIdsFromMarkdown(part.text))
     })
   })
 
@@ -92,8 +93,8 @@ const MessageLinkContext = createContext<MessageLinkContextValue | null>(null)
 function MessageResponseLink({ href, children }: ComponentProps<'a'>) {
   const context = useContext(MessageLinkContext)
 
-  if (href?.startsWith('#citation-')) {
-    const citationId = href.replace('#citation-', '')
+  if (isCitationLinkHref(href)) {
+    const citationId = citationIdFromHref(href)
     const citation = context?.citationsById.get(citationId)
 
     if (!context || !citation) {
@@ -280,11 +281,8 @@ export default function Chat({
     enabled: citationIds.length > 0,
     placeholderData: keepPreviousData,
     refetchInterval: (query) => {
-      const hasProcessingCitation = (query.state.data ?? []).some(
-        (citation) =>
-          citation.videoStatus === 'pending_upload' ||
-          citation.videoStatus === 'uploading' ||
-          citation.videoStatus === 'processing'
+      const hasProcessingCitation = (query.state.data ?? []).some((citation) =>
+        isVideoInFlight(citation.videoStatus)
       )
       return hasProcessingCitation ? 5000 : false
     },
@@ -302,11 +300,8 @@ export default function Chat({
     enabled: sourceLinkIds.length > 0,
     placeholderData: keepPreviousData,
     refetchInterval: (query) => {
-      const hasProcessingSource = (query.state.data ?? []).some(
-        (source) =>
-          source.videoStatus === 'pending_upload' ||
-          source.videoStatus === 'uploading' ||
-          source.videoStatus === 'processing'
+      const hasProcessingSource = (query.state.data ?? []).some((source) =>
+        isVideoInFlight(source.videoStatus)
       )
       return hasProcessingSource ? 5000 : false
     },

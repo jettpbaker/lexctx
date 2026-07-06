@@ -1,5 +1,4 @@
 import { createBlurUp } from '@mux/blurup'
-import Mux from '@mux/mux-node'
 import { sleep } from 'workflow'
 import {
   markSourceVideoFailed,
@@ -7,8 +6,8 @@ import {
   saveMuxAssetId,
   saveMuxBlurUpPlaceholder,
 } from '~/db/queries/sources'
-import { env } from '~/env'
 import { MUX_POLL_INTERVAL, MAX_MUX_POLLS } from '~/lib/constants'
+import { createMuxClient } from '~/server/mux'
 
 export async function pollMuxFinishedProcessing(sourceId: string, muxUploadId: string) {
   'use workflow'
@@ -69,13 +68,6 @@ export async function pollMuxFinishedProcessing(sourceId: string, muxUploadId: s
   }
 
   await persistVideoFailed(sourceId, 'Mux asset did not finish processing in time')
-}
-
-function createMuxClient() {
-  return new Mux({
-    tokenId: env.MUX_TOKEN_ID,
-    tokenSecret: env.MUX_TOKEN_SECRET,
-  })
 }
 
 async function getMuxUpload(muxUploadId: string) {

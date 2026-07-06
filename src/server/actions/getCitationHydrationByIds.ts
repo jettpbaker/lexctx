@@ -3,19 +3,20 @@
 import type { CitationLookup, HydratedCitation } from '~/lib/types/citations'
 
 import { getCitationHydrationRowsByLookups } from '~/db/queries/rag-chunks'
+import { citationId, parseCitationId } from '~/lib/chat/citationLinks'
 
 type CitationLookupWithId = CitationLookup & {
   citationId: string
 }
 
 function parseCitationLookup(citationId: string): CitationLookupWithId | null {
-  const match = citationId.match(/^(.+):chunk:(\d+)$/)
-  if (!match) return null
+  const parsedId = parseCitationId(citationId)
+  if (!parsedId) return null
 
   return {
     citationId,
-    sourceId: match[1],
-    chunkIndex: Number(match[2]),
+    sourceId: parsedId.sourceId,
+    chunkIndex: parsedId.chunkIndex,
   }
 }
 
@@ -32,7 +33,7 @@ export async function getCitationHydrationByIds(
 
   const rows = await getCitationHydrationRowsByLookups(lookups)
   const rowsByCitationId = new Map(
-    rows.map((row) => [`${row.sourceId}:chunk:${row.chunkIndex}`, row])
+    rows.map((row) => [citationId(row.sourceId, row.chunkIndex), row])
   )
 
   return lookups.map((lookup) => {

@@ -3,6 +3,8 @@ import type { ChatUsage } from '~/lib/types/chat'
 import type { HydratedCitation } from '~/lib/types/citations'
 import type { CollectionGroupCollection, SourceRowSource } from '~/lib/types/ui/sources'
 
+import { citationId } from '~/lib/chat/citationLinks'
+
 const now = new Date()
 const minutesAgo = (n: number) => new Date(now.getTime() - n * 60_000)
 const hoursAgo = (n: number) => new Date(now.getTime() - n * 60 * 60_000)
@@ -535,7 +537,7 @@ function citation(
 ): HydratedCitation {
   const videoStatus = input.videoStatus
   return {
-    citationId: input.citationId ?? `mock-source:chunk:${input.chunkIndex ?? 0}`,
+    citationId: input.citationId ?? citationId('mock-source', input.chunkIndex ?? 0),
     sourceId: input.sourceId ?? 'mock-source',
     sourceName: input.sourceName ?? 'Lecture_03_compilers.mp4',
     collectionId: input.collectionId ?? 'mock-collection',

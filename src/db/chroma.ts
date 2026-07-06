@@ -1,5 +1,7 @@
 import 'server-only'
 import type { RagChunk } from '~/lib/rag/chunkTranscriptSegments'
+import type { SourceSearchFilters } from '~/lib/types/search'
+import type { SourceIndexMetadata } from '~/lib/types/sources'
 
 import { ChromaCloudSpladeEmbeddingFunction } from '@chroma-core/chroma-cloud-splade'
 import { OpenAIEmbeddingFunction } from '@chroma-core/openai'
@@ -14,6 +16,7 @@ import {
   VectorIndexConfig,
 } from 'chromadb'
 import { env } from '~/env'
+import { citationId } from '~/lib/chat/citationLinks'
 
 const LECTURE_CHUNKS_COLLECTION = 'lecture_chunks_v1'
 const SPARSE_EMBEDDING_KEY = 'sparse_embedding'
@@ -82,23 +85,14 @@ export async function getLectureChunksCollection() {
   return lectureChunksCollectionPromise
 }
 
-type LectureChunkSourceMetadata = {
-  sourceId: string
-  sourceName: string
-  collectionId: string
-  collectionName: string
-}
-
-import type { SourceSearchFilters } from '~/lib/types/search'
-
 export async function upsertLectureChunks(
-  metadata: LectureChunkSourceMetadata,
+  metadata: SourceIndexMetadata,
   chunks: RagChunk[]
 ) {
   const collection = await getLectureChunksCollection()
 
   await collection.upsert({
-    ids: chunks.map((chunk) => `${metadata.sourceId}:chunk:${chunk.index}`),
+    ids: chunks.map((chunk) => citationId(metadata.sourceId, chunk.index)),
     documents: chunks.map((chunk) => chunk.text),
     metadatas: chunks.map((chunk) => ({
       sourceId: metadata.sourceId,

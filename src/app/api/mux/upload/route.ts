@@ -1,14 +1,11 @@
-import Mux from '@mux/mux-node'
 import { start } from 'workflow/api'
 import { z } from 'zod'
 import { saveMuxUploadId } from '~/db/queries/sources'
 import { env } from '~/env'
+import { createMuxClient } from '~/server/mux'
 import { pollMuxFinishedProcessing } from '~/workflows/pollMuxFinishedProcessing'
 
-const mux = new Mux({
-  tokenId: env.MUX_TOKEN_ID,
-  tokenSecret: env.MUX_TOKEN_SECRET,
-})
+const mux = createMuxClient()
 
 const createUploadSchema = z.object({
   sourceId: z.uuid(),

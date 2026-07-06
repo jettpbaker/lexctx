@@ -11,6 +11,7 @@ export const env = createEnv({
     CHROMA_TENANT: z.string().min(1),
     CHROMA_DATABASE: z.string().min(1),
     OPENAI_API_KEY: z.string().min(1),
+    EXA_API_KEY: z.string().min(1),
     AI_GATEWAY_API_KEY: z.string().min(1),
     MUX_TOKEN_ID: z.string().min(1),
     MUX_TOKEN_SECRET: z.string().min(1),

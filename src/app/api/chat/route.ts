@@ -5,7 +5,6 @@ import type { ChatUsage } from '~/lib/types/chat'
 import {
   gateway,
   streamText,
-  UIMessage,
   convertToModelMessages,
   stepCountIs,
   validateUIMessages,
@@ -15,9 +14,7 @@ import {
   createUIMessageStreamResponse,
   type StreamTextResult,
 } from 'ai'
-import { gzip, gunzip } from 'zlib'
 import { z } from 'zod'
-import { getChatById, upsertChat } from '~/db/queries/chats'
 import { withDbRetry } from '~/lib/db/withDbRetry'
 import {
   addLanguageModelUsages,
@@ -26,6 +23,7 @@ import {
 } from '~/server/ai/calculateChatUsage'
 import { chatTools } from '~/server/ai/tools'
 import { parseChatModelId, type ChatModelId } from '~/server/ai/modelMapping'
+import { loadChat, persistChat, type LexMessage } from '~/server/chat/store'
 
 const CHAT_MAX_STEPS = 12
 const chatPostSchema = z.object({
@@ -116,50 +114,6 @@ function getChatProviderOptions(modelId: ChatModelId, chatId: string): ChatProvi
   return undefined
 }
 
-export function gzipAsync(input: string): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    gzip(input, (error, result) => {
-      if (error) {
-        reject(error)
-        return
-      }
-      resolve(result)
-    })
-  })
-}
-
-export function gunzipAsync(input: Buffer): Promise<string> {
-  return new Promise((resolve, reject) => {
-    gunzip(input, (error, result) => {
-      if (error) {
-        reject(error)
-        return
-      }
-      resolve(result.toString())
-    })
-  })
-}
-
-async function persistChat(
-  chatId: string,
-  messages: UIMessage[],
-  modelId: ChatModelId,
-  usage?: ChatUsage
-) {
-  const messageCount = messages.filter((message) => message.role !== 'system').length
-  const messagesString = JSON.stringify(messages)
-  const messagesGzip = await gzipAsync(messagesString)
-  const messagesGzipBase64 = messagesGzip.toString('base64')
-
-  await upsertChat(chatId, messagesGzipBase64, messageCount, usage, modelId)
-}
-
-export type LexUIDataTypes = {
-  usage: ChatUsage
-}
-
-export type LexMessage = UIMessage<unknown, LexUIDataTypes>
-
 function getSystemPrompt(timeZone: unknown, locale: unknown) {
   const now = new Date()
   const resolvedTimeZone = typeof timeZone === 'string' && timeZone.length > 0 ? timeZone : 'UTC'
@@ -214,25 +168,6 @@ Citations:
 - Do not write bare labels like S1.
 - Do not cite the same citationId more than once in a single response.
 - Citation IDs are valid only for the current sourceSearch results; call sourceSearch again before citing in a later response.`
-}
-
-export async function loadChat(id: string): Promise<{ exists: boolean; messages: LexMessage[] }> {
-  const [chat] = await getChatById(id)
-
-  if (!chat) {
-    // Chat not found, this is expected to be a new chat.
-    return { exists: false, messages: [] }
-  }
-
-  if (!chat.messagesGzipBase64) {
-    return { exists: true, messages: [] }
-  }
-
-  const messagesGzip = Buffer.from(chat.messagesGzipBase64, 'base64')
-  const messagesString = await gunzipAsync(messagesGzip)
-  const messages = JSON.parse(messagesString)
-
-  return { exists: true, messages }
 }
 
 export async function POST(req: Request) {

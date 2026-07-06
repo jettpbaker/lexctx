@@ -28,3 +28,11 @@ export type HydratedCitation = {
   startSeconds: number
   endSeconds: number
 }
+
+export function isVideoInFlight(videoStatus: VideoStatus | 'deleted') {
+  return (
+    videoStatus === 'pending_upload' ||
+    videoStatus === 'uploading' ||
+    videoStatus === 'processing'
+  )
+}

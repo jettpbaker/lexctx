@@ -1,8 +1,8 @@
 'use server'
 
-import Mux from '@mux/mux-node'
 import { start } from 'workflow/api'
-import { env } from '~/env'
+import Mux from '@mux/mux-node'
+import { createMuxClient } from '~/server/mux'
 import { deleteMuxVideoAfterUploadCompletes } from '~/workflows/deleteMuxVideoAfterUploadCompletes'
 
 export async function deleteSourceVideo(sourceId: string, muxAssetId: string) {
@@ -53,11 +53,4 @@ function isMuxUploadAlreadyCompletedError(error: unknown) {
   if (!(error instanceof Error)) return false
 
   return error.message.includes('The upload has already completed')
-}
-
-function createMuxClient() {
-  return new Mux({
-    tokenId: env.MUX_TOKEN_ID,
-    tokenSecret: env.MUX_TOKEN_SECRET,
-  })
 }

@@ -2,8 +2,7 @@ import { asc, desc, eq, inArray } from 'drizzle-orm'
 import db from '~/db'
 import { isUniqueViolation } from '~/db/queries/utils'
 import { collections, sources, transcriptSegments } from '~/db/schema'
-import { MAX_FILES_PER_UPLOAD } from '~/lib/constants'
-import { CONTENT_HASH_TYPE } from '~/lib/constants'
+import { CONTENT_HASH_TYPE, MAX_FILES_PER_UPLOAD } from '~/lib/constants'
 
 type TranscriptSegmentInput = {
   index: number
@@ -66,7 +65,7 @@ export async function listAllSources() {
 export async function createPendingSources(collectionId: string, names: string[]) {
   if (names.length === 0) return []
   if (names.length > MAX_FILES_PER_UPLOAD)
-    throw new Error('You can upload up to 13 sources at once')
+    throw new Error(`You can upload up to ${MAX_FILES_PER_UPLOAD} sources at once`)
 
   const createdSources = await db
     .insert(sources)
@@ -85,7 +84,6 @@ export async function updateSourceNameById(id: string, name: string) {
     .update(sources)
     .set({ name: trimmedName })
     .where(eq(sources.id, id))
-    .returning({ id: sources.id, name: sources.name })
 }
 
 export async function setSourceHash(id: string, hash: string, fileSize: number) {
@@ -200,6 +198,21 @@ export async function getSourceIndexMetadata(sourceId: string) {
   return metadata
 }
 
+export async function getSourceIndexMetadataByIds(sourceIds: string[]) {
+  if (sourceIds.length === 0) return []
+
+  return db
+    .select({
+      sourceId: sources.id,
+      sourceName: sources.name,
+      collectionId: collections.id,
+      collectionName: collections.name,
+    })
+    .from(sources)
+    .innerJoin(collections, eq(sources.collectionId, collections.id))
+    .where(inArray(sources.id, sourceIds))
+}
+
 export async function saveSourceTranscript(
   sourceId: string,
   transcriptText: string,
@@ -235,17 +248,6 @@ export async function getSourceLinkHydrationByIds(sourceIds: string[]) {
       muxPlaybackId: sources.muxPlaybackId,
       muxBlurDataUrl: sources.muxBlurDataUrl,
       muxBlurAspectRatio: sources.muxBlurAspectRatio,
-      videoStatus: sources.videoStatus,
-    })
-    .from(sources)
-    .where(inArray(sources.id, sourceIds))
-}
-
-export async function getSourceVideoDataByIds(sourceIds: string[]) {
-  return await db
-    .select({
-      sourceId: sources.id,
-      muxPlaybackId: sources.muxPlaybackId,
       videoStatus: sources.videoStatus,
     })
     .from(sources)
