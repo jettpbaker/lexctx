@@ -75,32 +75,48 @@ export async function ingestSource(id: string, url: string, key: string) {
     }
   }
 
-  if (!transcript?.data.chunks) {
+  if (!transcript?.data.chunks?.length) {
     await persistSourceFailed(id, 'Transcription returned no chunks')
     return
   }
 
-  const transcriptSegments: TranscriptSegmentForChunking[] = normalizeTranscriptSegments(
-    transcript.data.chunks
-  )
-
-  await persistSourceTranscript(id, transcript.data.text, transcriptSegments)
-  const summaryPromise = generateAndPersistSourceSummary(id, transcript.data.text)
-
   try {
-    await deleteSourceAudioFile(id, key)
+    const transcriptSegments: TranscriptSegmentForChunking[] = normalizeTranscriptSegments(
+      transcript.data.chunks
+    )
+
+    await persistSourceTranscript(id, transcript.data.text, transcriptSegments)
+    const summaryPromise = generateAndPersistSourceSummary(id, transcript.data.text)
+
+    const chunks = await createRagChunks(transcriptSegments)
+    await persistRagChunks(id, chunks)
+
+    const sourceMetadata = await loadSourceIndexMetadata(id)
+    await indexRagChunks(sourceMetadata, chunks)
+
+    await summaryPromise
+    await persistSourceReady(id)
+
+    try {
+      await deleteSourceAudioFile(id, key)
+    } catch (error) {
+      console.error('Error deleting source audio file: ', error)
+    }
   } catch (error) {
-    console.error('Error deleting source audio file: ', error)
+    console.error('Post-transcription ingest error: ', error)
+
+    if (error instanceof Error) {
+      await persistSourceFailed(id, error.message)
+      return
+    }
+
+    if (typeof error === 'string') {
+      await persistSourceFailed(id, error)
+      return
+    }
+
+    await persistSourceFailed(id, 'Ingest encountered an unknown error')
   }
-
-  const chunks = await createRagChunks(transcriptSegments)
-  await persistRagChunks(id, chunks)
-
-  const sourceMetadata = await loadSourceIndexMetadata(id)
-  await indexRagChunks(sourceMetadata, chunks)
-
-  await summaryPromise
-  await persistSourceReady(id)
 }
 
 function normalizeTranscriptSegments(chunks: WizperChunk[]) {

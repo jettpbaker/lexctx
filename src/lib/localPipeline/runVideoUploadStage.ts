@@ -57,15 +57,6 @@ export default async function runVideoUploadStage(id: string, onDone: () => void
     })
 
     markVideoUploadCompleted(id)
-
-    const monitorRes = await fetch('/api/mux/monitor', {
-      method: 'POST',
-      body: JSON.stringify({ sourceId: id }),
-    })
-
-    if (!monitorRes.ok) {
-      throw new Error(`Failed to start Mux processing monitor: ${monitorRes.status}`)
-    }
   } catch (error) {
     markVideoPipelineFailed(id, error instanceof Error ? error.message : 'Video upload failed')
   } finally {

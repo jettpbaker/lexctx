@@ -5,7 +5,7 @@ export const TRANSCRIPTION_POLL_INTERVAL = '5 seconds'
 export const MAX_TRANSCRIPTION_POLLS = 90
 
 export const MUX_POLL_INTERVAL = '20 seconds'
-export const MAX_MUX_POLLS = 90
+export const MAX_MUX_POLLS = 210
 export const MUX_DELETE_CLEANUP_POLL_INTERVAL = '20 seconds'
 export const MAX_MUX_DELETE_CLEANUP_POLLS = 15
 

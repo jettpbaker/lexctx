@@ -1,7 +1,9 @@
 import Mux from '@mux/mux-node'
+import { start } from 'workflow/api'
 import { z } from 'zod'
 import { saveMuxUploadId } from '~/db/queries/sources'
 import { env } from '~/env'
+import { pollMuxFinishedProcessing } from '~/workflows/pollMuxFinishedProcessing'
 
 const mux = new Mux({
   tokenId: env.MUX_TOKEN_ID,
@@ -26,6 +28,7 @@ export async function POST(request: Request) {
   })
 
   await saveMuxUploadId(sourceId, upload.id)
+  await start(pollMuxFinishedProcessing, [sourceId, upload.id])
 
   return Response.json({
     uploadId: upload.id,

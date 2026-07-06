@@ -11,7 +11,13 @@ export async function deleteSourceVideo(sourceId: string, muxAssetId: string) {
   try {
     await mux.video.assets.delete(muxAssetId)
   } catch (error) {
+    if (isMuxNotFoundError(error)) {
+      console.info('Mux asset already deleted: ', { sourceId, muxAssetId })
+      return
+    }
+
     console.error('Error deleting Mux asset: ', { sourceId, muxAssetId, error })
+    throw error
   }
 }
 
@@ -29,8 +35,18 @@ export async function cancelMuxUpload(sourceId: string, muxUploadId: string | nu
       return
     }
 
+    if (isMuxNotFoundError(error)) {
+      console.info('Mux upload already deleted: ', { sourceId, muxUploadId })
+      return
+    }
+
     console.error('Error cancelling Mux upload: ', { sourceId, muxUploadId, error })
+    throw error
   }
+}
+
+function isMuxNotFoundError(error: unknown) {
+  return error instanceof Mux.NotFoundError
 }
 
 function isMuxUploadAlreadyCompletedError(error: unknown) {

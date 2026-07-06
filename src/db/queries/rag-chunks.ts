@@ -7,6 +7,9 @@ import { RagChunk } from '~/lib/rag/chunkTranscriptSegments'
 
 export async function upsertRagChunks(sourceId: string, chunks: RagChunk[]) {
   await db.delete(ragChunks).where(eq(ragChunks.sourceId, sourceId))
+
+  if (chunks.length === 0) return
+
   await db.insert(ragChunks).values(
     chunks.map((chunk) => ({
       sourceId,

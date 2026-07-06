@@ -16,7 +16,9 @@ import {
   type StreamTextResult,
 } from 'ai'
 import { gzip, gunzip } from 'zlib'
+import { z } from 'zod'
 import { getChatById, upsertChat } from '~/db/queries/chats'
+import { withDbRetry } from '~/lib/db/withDbRetry'
 import {
   addLanguageModelUsages,
   calculateChatUsage,
@@ -26,6 +28,14 @@ import { chatTools } from '~/server/ai/tools'
 import { parseChatModelId, type ChatModelId } from '~/server/ai/modelMapping'
 
 const CHAT_MAX_STEPS = 12
+const chatPostSchema = z.object({
+  id: z.string().min(1).max(64),
+  message: z.object({}).passthrough(),
+  locale: z.string().optional(),
+  timeZone: z.string().optional(),
+  modelId: z.string().optional(),
+})
+
 type ChatProviderOptions = NonNullable<Parameters<typeof streamText>[0]['providerOptions']>
 type OpenAIReasoningEffort = NonNullable<OpenAILanguageModelResponsesOptions['reasoningEffort']>
 type XaiReasoningEffort = NonNullable<XaiLanguageModelResponsesOptions['reasoningEffort']>
@@ -226,7 +236,21 @@ export async function loadChat(id: string): Promise<{ exists: boolean; messages:
 }
 
 export async function POST(req: Request) {
-  const { message, id, locale, timeZone, modelId: requestedModelId } = await req.json()
+  let body: unknown
+
+  try {
+    body = await req.json()
+  } catch {
+    return Response.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
+  const parsedBody = chatPostSchema.safeParse(body)
+  if (!parsedBody.success) {
+    return Response.json({ error: 'Invalid request body' }, { status: 400 })
+  }
+
+  const { message: rawMessage, id, locale, timeZone, modelId: requestedModelId } = parsedBody.data
+  const message = rawMessage as unknown as LexMessage
   const modelId = parseChatModelId(requestedModelId)
 
   const chat = await loadChat(id)
@@ -237,7 +261,7 @@ export async function POST(req: Request) {
     messages,
   })
 
-  await persistChat(id, validatedMessages, modelId)
+  await withDbRetry(() => persistChat(id, validatedMessages, modelId))
 
   const modelMessages = await convertToModelMessages(validatedMessages)
 
@@ -280,20 +304,33 @@ export async function POST(req: Request) {
       )
     },
     onFinish: async ({ messages, isAborted }) => {
-      if (isAborted || !streamResult) {
+      if (!streamResult) {
         return
       }
 
-      const [billingUsage, finalStepUsage] = await Promise.all([
-        streamResult.totalUsage,
-        streamResult.usage,
-      ])
-      const usage = calculateChatUsage(
-        billingUsage,
-        finalStepUsage.inputTokens ?? 0,
-        modelId
-      )
-      await persistChat(id, messages, modelId, usage)
+      let usage: ChatUsage | undefined
+
+      if (!isAborted) {
+        try {
+          const [billingUsage, finalStepUsage] = await Promise.all([
+            streamResult.totalUsage,
+            streamResult.usage,
+          ])
+          usage = calculateChatUsage(
+            billingUsage,
+            finalStepUsage.inputTokens ?? 0,
+            modelId
+          )
+        } catch (error) {
+          console.error('Error resolving chat usage: ', error)
+        }
+      }
+
+      try {
+        await withDbRetry(() => persistChat(id, messages, modelId, usage))
+      } catch (error) {
+        console.error('Error persisting chat: ', error)
+      }
     },
   })
 
