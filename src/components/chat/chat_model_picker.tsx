@@ -3,7 +3,7 @@
 import { Tick02Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useHorizontalScrollEdges } from '~/components/ai-elements/scroll-fade'
 import { ModelLogo } from '~/components/chat/model_logo'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
@@ -113,6 +113,9 @@ const CHAT_MODEL_PROVIDER_GROUPS: ChatModelProviderGroup[] = [
 
 const CHAT_MODEL_OPTIONS = CHAT_MODEL_PROVIDER_GROUPS.flatMap((provider) => provider.models)
 const MODEL_CHIP_ROW_HEIGHT_REM = 1
+const PROVIDER_TAB_CLIP_RADIUS_PX = 6
+const INITIAL_PROVIDER_TAB_CLIP = `inset(0 100% 0 0 round ${PROVIDER_TAB_CLIP_RADIUS_PX}px)`
+const PROVIDER_TAB_TRANSITION = 'clip-path 220ms cubic-bezier(0.22, 1, 0.36, 1)'
 
 function findModel(modelId: ChatModelId) {
   for (const provider of CHAT_MODEL_PROVIDER_GROUPS) {
@@ -164,6 +167,15 @@ function centerPill(button: HTMLElement, container: HTMLElement, smooth: boolean
   container.scrollTo({ left: clamped, behavior: smooth ? 'smooth' : 'auto' })
 }
 
+function getProviderTabClip(container: HTMLElement, button: HTMLElement) {
+  const top = button.offsetTop
+  const left = button.offsetLeft
+  const right = container.offsetWidth - left - button.offsetWidth
+  const bottom = container.offsetHeight - top - button.offsetHeight
+
+  return `inset(${top}px ${right}px ${bottom}px ${left}px round ${PROVIDER_TAB_CLIP_RADIUS_PX}px)`
+}
+
 function ModelCheck({ active }: { active: boolean }) {
   return (
     <HugeiconsIcon
@@ -182,8 +194,40 @@ function ProviderTabBar({
   onChange: (providerId: string) => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const bgOverlayRef = useRef<HTMLDivElement>(null)
+  const textOverlayRef = useRef<HTMLDivElement>(null)
+  const initializedRef = useRef(false)
   const reduceMotion = useReducedMotion() ?? false
   const { atLeft, atRight } = useHorizontalScrollEdges(scrollRef)
+
+  const moveClipToButton = useCallback((button: HTMLElement, animate: boolean) => {
+    const content = contentRef.current
+    const bgOverlay = bgOverlayRef.current
+    const textOverlay = textOverlayRef.current
+    if (!content || !bgOverlay || !textOverlay) return
+
+    const transition = reduceMotion || !animate ? 'none' : PROVIDER_TAB_TRANSITION
+    const clipPath = getProviderTabClip(content, button)
+
+    bgOverlay.style.transition = transition
+    textOverlay.style.transition = transition
+    bgOverlay.style.clipPath = clipPath
+    textOverlay.style.clipPath = clipPath
+  }, [reduceMotion])
+
+  useLayoutEffect(() => {
+    const content = contentRef.current
+    if (!content) return
+
+    const activeButton = content.querySelector<HTMLElement>(
+      `[data-provider-id="${activeProviderId}"]`
+    )
+    if (!activeButton) return
+
+    moveClipToButton(activeButton, initializedRef.current)
+    initializedRef.current = true
+  }, [activeProviderId, moveClipToButton])
 
   useEffect(() => {
     const container = scrollRef.current
@@ -230,35 +274,51 @@ function ProviderTabBar({
       <div
         ref={scrollRef}
         style={maskImage ? { maskImage, WebkitMaskImage: maskImage } : undefined}
-        className='relative -mb-4 flex gap-1.5 overflow-x-auto overflow-y-hidden px-3 pt-3 pb-7 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&::-webkit-scrollbar]:size-0'
+        className='relative -mb-4 overflow-x-auto overflow-y-hidden px-3 pt-3 pb-7 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&::-webkit-scrollbar]:size-0'
       >
-        {CHAT_MODEL_PROVIDER_GROUPS.map((provider) => {
-          const active = provider.id === activeProviderId
-
-          return (
+        <div ref={contentRef} className='relative inline-flex gap-1.5'>
+          <div
+            ref={bgOverlayRef}
+            aria-hidden
+            className='pointer-events-none absolute inset-0 bg-secondary'
+            style={{ clipPath: INITIAL_PROVIDER_TAB_CLIP }}
+          />
+          {CHAT_MODEL_PROVIDER_GROUPS.map((provider) => (
             <button
               key={provider.id}
               data-provider-id={provider.id}
               type='button'
-              aria-pressed={active}
+              aria-pressed={provider.id === activeProviderId}
               onClick={(event) => {
+                moveClipToButton(event.currentTarget, true)
                 onChange(provider.id)
                 if (scrollRef.current) {
                   centerPill(event.currentTarget, scrollRef.current, !reduceMotion)
                 }
               }}
-              className={cn(
-                'flex shrink-0 items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-150 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]',
-                active
-                  ? 'bg-secondary text-foreground'
-                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-              )}
+              className='relative flex shrink-0 items-center gap-2 rounded-md bg-transparent px-3 py-1.5 text-xs font-medium text-muted-foreground'
             >
               <ModelLogo logo={provider.logo} className='size-4' />
               {provider.label}
             </button>
-          )
-        })}
+          ))}
+          <div
+            ref={textOverlayRef}
+            aria-hidden
+            className='pointer-events-none absolute inset-0 flex gap-1.5'
+            style={{ clipPath: INITIAL_PROVIDER_TAB_CLIP }}
+          >
+            {CHAT_MODEL_PROVIDER_GROUPS.map((provider) => (
+              <span
+                key={provider.id}
+                className='flex shrink-0 items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium text-foreground'
+              >
+                <ModelLogo logo={provider.logo} className='size-4' />
+                {provider.label}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )
