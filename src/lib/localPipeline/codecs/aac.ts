@@ -22,6 +22,26 @@ function copyBufferSource(source: AllowSharedBufferSource) {
   return copyBytes(view)
 }
 
+function throwIfAborted(signal?: AbortSignal) {
+  if (signal?.aborted) throw new DOMException('aborted', 'AbortError')
+}
+
+function yieldToBrowser(signal?: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      signal?.removeEventListener('abort', abort)
+      resolve()
+    }, 0)
+
+    function abort() {
+      clearTimeout(timeoutId)
+      reject(new DOMException('aborted', 'AbortError'))
+    }
+
+    signal?.addEventListener('abort', abort, { once: true })
+  })
+}
+
 function readBits(bytes: Uint8Array, bitOffset: number, bitCount: number) {
   let value = 0
 
@@ -87,8 +107,11 @@ function createAdtsHeader(config: AacConfig, frameLength: number) {
 
 export async function extractAacToAdtsFile(
   audioTrack: InputAudioTrack,
-  onProgress: (progress: number) => void
+  onProgress: (progress: number) => void,
+  signal?: AbortSignal
 ): Promise<File> {
+  throwIfAborted(signal)
+
   const sink = new EncodedPacketSink(audioTrack)
   const firstPacket = await sink.getFirstPacket()
   if (!firstPacket) throw new Error('Failed to get first AAC packet')
@@ -108,12 +131,14 @@ export async function extractAacToAdtsFile(
   let lastReportedProgress = 0
 
   for await (const packet of sink.packets(firstPacket)) {
+    throwIfAborted(signal)
+
     const elapsed = packet.timestamp - startTimestamp + packet.duration
     const progress = Math.floor((elapsed / duration) * 100)
     if (progress > lastReportedProgress) {
       lastReportedProgress = progress
       onProgress(progress)
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+      await yieldToBrowser(signal)
     }
 
     // ADTS stores a small header before every AAC frame.

@@ -93,10 +93,11 @@ export async function setSourceHash(id: string, hash: string, fileSize: number) 
 }
 
 export async function markSourceAudioUploaded(id: string, url: string, key: string) {
-  await db
+  return await db
     .update(sources)
     .set({ status: 'transcribing', audioUrl: url, audioKey: key })
     .where(eq(sources.id, id))
+    .returning({ id: sources.id })
 }
 
 export async function removeSourceAudioMetadata(id: string) {

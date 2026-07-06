@@ -12,6 +12,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { CollectionGroup } from '~/components/sources/collection_group'
 import { Separator } from '~/components/ui/separator'
 import { useSourceStore } from '~/hooks/useStore'
+import { abortPipelineStages } from '~/lib/localPipeline/stageCancellationRegistry'
 import tickPipeline from '~/lib/localPipeline/tickPipeline'
 import { abortVideoUpload } from '~/lib/localPipeline/videoUploadRegistry'
 import { CITATIONS_KEY, COLLECTIONS_WITH_SOURCES_KEY } from '~/lib/query_keys'
@@ -36,7 +37,6 @@ import {
 } from '~/server/actions/collections'
 
 import { Button } from './ui/button'
-import CollectionsSidebarError from './collections_sidebar_error'
 
 type DbCollection = CollectionsWithSources[number]
 type DbSource = DbCollection['sources'][number]
@@ -55,6 +55,8 @@ export default function CollectionsSidebarClient({
   const localSources = useSourceStore(useShallow((state) => state.sources))
   const addSource = useSourceStore((state) => state.addSource)
   const removeSource = useSourceStore((state) => state.removeSource)
+  const getSourceSnapshot = useSourceStore((state) => state.getSourceSnapshot)
+  const restoreSourceSnapshot = useSourceStore((state) => state.restoreSourceSnapshot)
   const renameLocalSource = useSourceStore((state) => state.renameSource)
 
   const isSearching = searchQuery.trim().length > 0
@@ -74,10 +76,6 @@ export default function CollectionsSidebarClient({
       return shouldPollCollections(mergedCollections) ? 2000 : false
     },
   })
-
-  if (query.isError && !query.data) {
-    return <CollectionsSidebarError />
-  }
 
   const data = query.data
   const collections = mergeCollections(data, localSources)
@@ -211,15 +209,18 @@ export default function CollectionsSidebarClient({
       await queryClient.cancelQueries({ queryKey })
 
       const previousCollections = queryClient.getQueryData<CollectionsWithSources>(queryKey)
+      const previousLocalSource = getSourceSnapshot(source.id)
 
+      abortPipelineStages(source.id)
       abortVideoUpload(source.id)
       removeSource(source.id)
+      tickPipeline()
 
       queryClient.setQueryData<CollectionsWithSources>(queryKey, (current) =>
         removeSourceFromQuery(current, source.id)
       )
 
-      return { previousCollections }
+      return { previousCollections, previousLocalSource }
     },
     onError: (error, source, context) => {
       // TODO: Toast
@@ -228,6 +229,10 @@ export default function CollectionsSidebarClient({
       const queryKey = [COLLECTIONS_WITH_SOURCES_KEY]
 
       queryClient.setQueryData<CollectionsWithSources>(queryKey, context?.previousCollections)
+      if (context?.previousLocalSource) {
+        restoreSourceSnapshot(source.id, context.previousLocalSource)
+        tickPipeline()
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [CITATIONS_KEY] })
@@ -247,17 +252,23 @@ export default function CollectionsSidebarClient({
       await queryClient.cancelQueries({ queryKey })
 
       const previousCollections = queryClient.getQueryData<CollectionsWithSources>(queryKey)
+      const previousLocalSources = collection.sources.map((source) => ({
+        sourceId: source.id,
+        snapshot: getSourceSnapshot(source.id),
+      }))
 
       collection.sources.forEach((source) => {
+        abortPipelineStages(source.id)
         abortVideoUpload(source.id)
         removeSource(source.id)
       })
+      tickPipeline()
 
       queryClient.setQueryData<CollectionsWithSources>(queryKey, (current) =>
         removeCollectionFromQuery(current, collection.id)
       )
 
-      return { previousCollections }
+      return { previousCollections, previousLocalSources }
     },
     onError: (error, collection, context) => {
       // TODO: Toast
@@ -266,6 +277,10 @@ export default function CollectionsSidebarClient({
       const queryKey = [COLLECTIONS_WITH_SOURCES_KEY]
 
       queryClient.setQueryData<CollectionsWithSources>(queryKey, context?.previousCollections)
+      context?.previousLocalSources.forEach(({ sourceId, snapshot }) => {
+        restoreSourceSnapshot(sourceId, snapshot)
+      })
+      tickPipeline()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [CITATIONS_KEY] })

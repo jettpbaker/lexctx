@@ -6,7 +6,8 @@ import { extractOpusToWebmFile } from '../codecs/opus'
 
 export default async function extractAudioFile(
   video: File,
-  onProgress: (progress: number) => void
+  onProgress: (progress: number) => void,
+  signal?: AbortSignal
 ): Promise<File> {
   const input = new Input({
     formats: ALL_FORMATS,
@@ -21,15 +22,15 @@ export default async function extractAudioFile(
   }
 
   if (codec === 'aac') {
-    return extractAacToAdtsFile(audioTrack, onProgress)
+    return extractAacToAdtsFile(audioTrack, onProgress, signal)
   }
 
   if (codec === 'mp3') {
-    return extractMp3File(audioTrack, onProgress)
+    return extractMp3File(audioTrack, onProgress, signal)
   }
 
   if (codec === 'opus') {
-    return extractOpusToWebmFile(audioTrack, onProgress)
+    return extractOpusToWebmFile(audioTrack, onProgress, signal)
   }
 
   throw new Error(`Unsupported audio codec: ${codec}`)

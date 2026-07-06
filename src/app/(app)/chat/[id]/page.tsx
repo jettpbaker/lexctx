@@ -37,9 +37,17 @@ export default async function ChatPage({ params, searchParams }: ChatPageProps) 
 
   if (query) {
     return (
-      <Chat id={id} initialMessages={[]} initialQuery={query} initialModelId={initialModelId} />
+      <Chat
+        key={id}
+        id={id}
+        initialMessages={[]}
+        initialQuery={query}
+        initialModelId={initialModelId}
+      />
     )
   }
 
-  return <Chat id={id} initialMessages={chat?.messages ?? []} initialModelId={initialModelId} />
+  return (
+    <Chat key={id} id={id} initialMessages={chat?.messages ?? []} initialModelId={initialModelId} />
+  )
 }

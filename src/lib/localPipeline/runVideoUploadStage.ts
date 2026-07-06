@@ -1,6 +1,9 @@
 import * as UpChunk from '@mux/upchunk'
 import { useSourceStore } from '~/hooks/useStore'
 import { registerVideoUpload, unregisterVideoUpload } from '~/lib/localPipeline/videoUploadRegistry'
+import { markSourceVideoFailed } from '~/server/actions/sources'
+
+import { isAbortError, registerStageAbort, unregisterStageAbort } from './stageCancellationRegistry'
 
 type CreateMuxUploadResponse = {
   uploadId: string
@@ -12,9 +15,12 @@ export default async function runVideoUploadStage(id: string, onDone: () => void
   const markVideoUploadCompleted = useSourceStore.getState().markVideoUploadCompleted
   const markVideoPipelineFailed = useSourceStore.getState().markVideoPipelineFailed
   const updateVideoUploadProgress = useSourceStore.getState().updateVideoUploadProgress
+  const abortController = new AbortController()
+  const abortableStage = { abort: () => abortController.abort() }
 
   try {
     markVideoUploadStarted(id)
+    registerStageAbort(id, abortableStage)
 
     const video = useSourceStore.getState().files[id]?.video
     if (!video) {
@@ -24,6 +30,7 @@ export default async function runVideoUploadStage(id: string, onDone: () => void
     const res = await fetch('/api/mux/upload', {
       method: 'POST',
       body: JSON.stringify({ sourceId: id }),
+      signal: abortController.signal,
     })
 
     if (!res.ok) {
@@ -38,7 +45,13 @@ export default async function runVideoUploadStage(id: string, onDone: () => void
         file: video,
         chunkSize: 5120, // Uploads the file in ~5MB chunks.
       })
-      registerVideoUpload(id, upload)
+      registerVideoUpload(id, {
+        abort: () => {
+          upload.abort()
+          abortController.abort()
+          reject(new DOMException('aborted', 'AbortError'))
+        },
+      })
 
       upload.on('progress', (progress) => {
         updateVideoUploadProgress(id, progress.detail)
@@ -58,8 +71,15 @@ export default async function runVideoUploadStage(id: string, onDone: () => void
 
     markVideoUploadCompleted(id)
   } catch (error) {
-    markVideoPipelineFailed(id, error instanceof Error ? error.message : 'Video upload failed')
+    unregisterVideoUpload(id)
+    if (isAbortError(error)) return
+    if (!useSourceStore.getState().sources[id]) return
+
+    const errorMessage = error instanceof Error ? error.message : 'Video upload failed'
+    markVideoPipelineFailed(id, errorMessage)
+    await markSourceVideoFailed(id, errorMessage)
   } finally {
+    unregisterStageAbort(id, abortableStage)
     onDone()
   }
   return

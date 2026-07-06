@@ -1,10 +1,12 @@
 import { createUploadthing, type FileRouter as UploadThingFileRouter } from 'uploadthing/next'
+import { UTApi } from 'uploadthing/server'
 import { start } from 'workflow/api'
 import z from 'zod'
 import { markSourceAudioUploaded, markSourceFailed } from '~/db/queries/sources'
 import { ingestSource } from '~/workflows/ingestSource'
 
 const f = createUploadthing()
+const utapi = new UTApi()
 
 // FileRouter for your app, can contain multiple FileRoutes
 export const fileRouter = {
@@ -21,7 +23,16 @@ export const fileRouter = {
     .onUploadComplete(async ({ file, metadata }) => {
       // This code RUNS ON YOUR SERVER after upload
       try {
-        await markSourceAudioUploaded(metadata.sourceId, file.ufsUrl, file.key)
+        const updatedSources = await markSourceAudioUploaded(
+          metadata.sourceId,
+          file.ufsUrl,
+          file.key
+        )
+        if (updatedSources.length === 0) {
+          await utapi.deleteFiles(file.key)
+          return { fileUrl: file.ufsUrl }
+        }
+
         await start(ingestSource, [metadata.sourceId, file.ufsUrl, file.key])
       } catch (error) {
         console.error(`Error starting transcription workflow, ${error}`)

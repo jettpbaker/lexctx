@@ -14,6 +14,16 @@ type ActiveType = {
   videoUploading: string | null
 }
 
+type SourceSnapshot = {
+  source?: LocalSourceType
+  files?: SourceFiles
+  hashQueued: boolean
+  extractQueued: boolean
+  audioUploadQueued: boolean
+  videoUploadQueued: boolean
+  active: ActiveType
+}
+
 type SourceStore = {
   sources: Record<string, LocalSourceType>
   files: Partial<Record<string, SourceFiles>>
@@ -27,6 +37,8 @@ type SourceStore = {
 
   addSource: (source: LocalSourceType, file: File) => void
   removeSource: (sourceId: string) => void
+  getSourceSnapshot: (sourceId: string) => SourceSnapshot
+  restoreSourceSnapshot: (sourceId: string, snapshot: SourceSnapshot) => void
   renameSource: (sourceId: string, name: string) => void
 
   markHashingStarted: (id: string) => void
@@ -112,6 +124,65 @@ const renameSource = (
         name,
       },
     },
+  }
+}
+
+const appendUnique = (queue: string[], id: string) => {
+  return queue.includes(id) ? queue : [...queue, id]
+}
+
+const getSourceSnapshot = (
+  sources: Record<string, LocalSourceType>,
+  files: Partial<Record<string, SourceFiles>>,
+  sourceId: string,
+  active: ActiveType,
+  hashQueue: string[],
+  extractQueue: string[],
+  audioUploadQueue: string[],
+  videoUploadQueue: string[]
+): SourceSnapshot => ({
+  source: sources[sourceId],
+  files: files[sourceId],
+  hashQueued: hashQueue.includes(sourceId),
+  extractQueued: extractQueue.includes(sourceId),
+  audioUploadQueued: audioUploadQueue.includes(sourceId),
+  videoUploadQueued: videoUploadQueue.includes(sourceId),
+  active,
+})
+
+const restoreSourceSnapshot = (
+  sourceId: string,
+  snapshot: SourceSnapshot,
+  sources: Record<string, LocalSourceType>,
+  files: Partial<Record<string, SourceFiles>>,
+  hashQueue: string[],
+  extractQueue: string[],
+  audioUploadQueue: string[],
+  videoUploadQueue: string[]
+): Partial<SourceStore> => {
+  if (!snapshot.source) return {}
+
+  const { [sourceId]: _file, ...restFiles } = files
+
+  return {
+    sources: { ...sources, [sourceId]: snapshot.source },
+    files: snapshot.files ? { ...restFiles, [sourceId]: snapshot.files } : restFiles,
+    hashQueue:
+      snapshot.hashQueued || snapshot.active.hashing === sourceId
+        ? appendUnique(hashQueue, sourceId)
+        : hashQueue,
+    extractQueue:
+      snapshot.extractQueued || snapshot.active.extracting === sourceId
+        ? appendUnique(extractQueue, sourceId)
+        : extractQueue,
+    audioUploadQueue:
+      snapshot.audioUploadQueued || snapshot.active.audioUploading === sourceId
+        ? appendUnique(audioUploadQueue, sourceId)
+        : audioUploadQueue,
+    videoUploadQueue:
+      snapshot.videoUploadQueued || snapshot.active.videoUploading === sourceId
+        ? appendUnique(videoUploadQueue, sourceId)
+        : videoUploadQueue,
   }
 }
 
@@ -295,6 +366,8 @@ const markVideoUploadStarted = (
   active: ActiveType,
   queue: string[]
 ): Partial<SourceStore> => {
+  if (!sources[id]) return {}
+
   return {
     videoUploadQueue: queue.filter((sourceId) => sourceId !== id),
     active: { ...active, videoUploading: id },
@@ -315,6 +388,15 @@ const markVideoUploadCompleted = (
   files: Partial<Record<string, SourceFiles>>
 ): Partial<SourceStore> => {
   const { [id]: _, ...restFiles } = files
+  if (!sources[id]) {
+    return {
+      active: {
+        ...active,
+        videoUploading: active.videoUploading === id ? null : active.videoUploading,
+      },
+      files: restFiles,
+    }
+  }
 
   return {
     active: { ...active, videoUploading: null },
@@ -337,6 +419,15 @@ const markVideoPipelineFailed = (
   active: ActiveType
 ): Partial<SourceStore> => {
   const { [id]: _, ...restFiles } = files
+  if (!sources[id]) {
+    return {
+      active: {
+        ...active,
+        videoUploading: active.videoUploading === id ? null : active.videoUploading,
+      },
+      files: restFiles,
+    }
+  }
 
   return {
     active: { ...active, videoUploading: null },
@@ -449,7 +540,7 @@ const updateVideoUploadProgress = (
     },
   }
 }
-export const useSourceStore = create<SourceStore>()((set) => ({
+export const useSourceStore = create<SourceStore>()((set, get) => ({
   sources: {},
   files: {},
 
@@ -474,6 +565,32 @@ export const useSourceStore = create<SourceStore>()((set) => ({
         state.files,
         sourceId,
         state.active,
+        state.hashQueue,
+        state.extractQueue,
+        state.audioUploadQueue,
+        state.videoUploadQueue
+      )
+    ),
+  getSourceSnapshot: (sourceId) => {
+    const state = get()
+    return getSourceSnapshot(
+      state.sources,
+      state.files,
+      sourceId,
+      state.active,
+      state.hashQueue,
+      state.extractQueue,
+      state.audioUploadQueue,
+      state.videoUploadQueue
+    )
+  },
+  restoreSourceSnapshot: (sourceId, snapshot) =>
+    set((state) =>
+      restoreSourceSnapshot(
+        sourceId,
+        snapshot,
+        state.sources,
+        state.files,
         state.hashQueue,
         state.extractQueue,
         state.audioUploadQueue,
