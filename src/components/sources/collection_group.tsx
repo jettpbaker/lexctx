@@ -16,6 +16,7 @@ import {
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { SourceRow } from '~/components/sources/source_row'
 import { Button } from '~/components/ui/button'
 import {
@@ -65,7 +66,11 @@ export function CollectionGroup({
 }: CollectionGroupProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [open, setOpen] = useState(defaultOpen)
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false)
+  const dragDepth = useRef(0)
   const summary = summarizeStatuses(collection.sources.map((s) => s.status))
+
+  const canAddSources = Boolean(onAddSources)
 
   const inputRef = useRef<HTMLInputElement | null>(null)
   const rename = useInlineRename({
@@ -85,12 +90,52 @@ export function CollectionGroup({
     if (files.length === 0) return
 
     if (files.length > MAX_FILES_PER_UPLOAD) {
-      // TODO: Toast
-      console.error(`You can only upload ${MAX_FILES_PER_UPLOAD} files at a time`)
+      toast.error('Too many files', {
+        description: `You can add up to ${MAX_FILES_PER_UPLOAD} videos at once.`,
+      })
       return
     }
 
     onAddSources?.(collection, files)
+  }
+
+  function dragHasFiles(e: DragEvent<HTMLElement>) {
+    return Array.from(e.dataTransfer.types).includes('Files')
+  }
+
+  function handleDragEnter(e: DragEvent<HTMLElement>) {
+    if (!canAddSources || !dragHasFiles(e)) return
+    e.preventDefault()
+    dragDepth.current += 1
+    setIsDraggingFiles(true)
+  }
+
+  function handleDragOver(e: DragEvent<HTMLElement>) {
+    if (!canAddSources || !dragHasFiles(e)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+  }
+
+  function handleDragLeave(e: DragEvent<HTMLElement>) {
+    if (!canAddSources || !dragHasFiles(e)) return
+    dragDepth.current -= 1
+    if (dragDepth.current <= 0) {
+      dragDepth.current = 0
+      setIsDraggingFiles(false)
+    }
+  }
+
+  function handleDrop(e: DragEvent<HTMLElement>) {
+    if (!canAddSources) return
+    e.preventDefault()
+    dragDepth.current = 0
+    setIsDraggingFiles(false)
+
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length === 0) return
+
+    handleAddFiles(files)
+    e.dataTransfer.clearData()
   }
 
   useEffect(() => {
@@ -100,7 +145,25 @@ export function CollectionGroup({
   }, [isSearching])
 
   return (
-    <section className='flex flex-col overflow-clip rounded-lg border border-border bg-background'>
+    <section
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={cn(
+        'relative flex flex-col overflow-clip rounded-lg border bg-background transition-colors',
+        isDraggingFiles ? 'border-success/40' : 'border-border'
+      )}
+    >
+      {isDraggingFiles && (
+        <div className='pointer-events-none absolute inset-0 z-20 flex items-center justify-center overflow-hidden rounded-lg bg-success/5'>
+          <div
+            aria-hidden
+            className='absolute inset-0 animate-file-drag-sweep bg-linear-to-r from-white/0 via-white/50 to-white/0 mix-blend-overlay motion-reduce:animate-none'
+          />
+          {!isAddingSources && <p className='relative text-xs text-success'>Release to add videos</p>}
+        </div>
+      )}
       <header
         className={cn(
           'box-border flex h-[30px] items-stretch border-b bg-background text-xs',
@@ -181,9 +244,13 @@ export function CollectionGroup({
                   This will delete the collection and all sources in it.
                 </DialogDescription>
               </DialogHeader>
-              <DialogFooter>
+              <DialogFooter className='mt-2'>
+                <Button variant='ghost' size='sm' onClick={() => setDeleteDialogOpen(false)}>
+                  Cancel
+                </Button>
                 <Button
                   variant='destructive'
+                  size='sm'
                   onClick={() => {
                     setDeleteDialogOpen(false)
                     onDeleteCollection?.(collection)
@@ -221,7 +288,7 @@ export function CollectionGroup({
       {open && (
         <div className='flex flex-col overflow-hidden rounded-b-lg'>
           {collection.sources.length === 0 && (
-            <EmptyCollection handleAddFiles={handleAddFiles} isAddingSources={isAddingSources} />
+            <EmptyCollection isAddingSources={isAddingSources} />
           )}
           {collection.sources.length > 0 &&
             collection.sources.map((source) => (
@@ -277,65 +344,13 @@ function RatioBadge({ summary }: { summary: CollectionStatusSummary }) {
   return <span className='font-mono text-[11px] text-muted-foreground tabular-nums'>{ratio}</span>
 }
 
-function EmptyCollection({
-  handleAddFiles,
-  isAddingSources,
-}: {
-  handleAddFiles: (files: File[]) => void
-  isAddingSources: boolean
-}) {
-  const [showFileDragSweep, setShowFileDragSweep] = useState(false)
-
-  function handleDragEnter(e: DragEvent<HTMLDivElement>) {
-    e.preventDefault()
-    setShowFileDragSweep(true)
-  }
-
-  function handleDragOver(e: DragEvent<HTMLDivElement>) {
-    e.preventDefault()
-  }
-
-  function handleDragLeave(e: DragEvent<HTMLDivElement>) {
-    e.preventDefault()
-    setShowFileDragSweep(false)
-  }
-
-  function handleDrop(e: DragEvent<HTMLDivElement>) {
-    e.preventDefault()
-
-    const files = Array.from(e.dataTransfer.files)
-    if (files.length === 0) return
-
-    handleAddFiles(files)
-    e.dataTransfer.clearData()
-    setShowFileDragSweep(false)
-  }
-
+function EmptyCollection({ isAddingSources }: { isAddingSources: boolean }) {
   return (
-    <div
-      onDragEnter={handleDragEnter}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      className={cn(
-        'relative flex h-16 items-center justify-center text-center text-xs transition-colors'
-      )}
-    >
-      {showFileDragSweep && (
-        <div
-          onAnimationEnd={() => setShowFileDragSweep(false)}
-          aria-hidden
-          className='pointer-events-none absolute top-0 left-0 h-full w-full animate-file-drag-sweep bg-linear-to-r from-accent/0 via-accent to-accent/0 mix-blend-overlay'
-        />
-      )}
-      {showFileDragSweep && !isAddingSources && (
-        <p className='pointer-events-none text-success'>Release to add videos</p>
-      )}
-      {!showFileDragSweep && !isAddingSources && (
-        <p className='pointer-events-none text-muted-foreground'>Drop videos to add</p>
-      )}
-      {isAddingSources && (
+    <div className='relative flex h-16 items-center justify-center text-center text-xs'>
+      {isAddingSources ? (
         <Spinner className='pointer-events-none size-3.5 text-muted-foreground' />
+      ) : (
+        <p className='pointer-events-none text-muted-foreground'>Drop videos to add</p>
       )}
     </div>
   )

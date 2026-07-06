@@ -7,6 +7,7 @@ import { PlusSignIcon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '~/components/ui/button'
 import { Field, FieldError, FieldLabel } from '~/components/ui/field'
 import { Input } from '~/components/ui/input'
@@ -33,8 +34,10 @@ export default function NewCollectionButton() {
       queryClient.invalidateQueries({ queryKey })
     },
     onError: (error) => {
-      // TODO toast
       console.error('Error creating collection', error)
+      toast.error("Couldn't create collection", {
+        description: 'Something went wrong. Please try again.',
+      })
     },
   })
 

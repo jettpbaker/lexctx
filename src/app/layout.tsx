@@ -3,6 +3,7 @@ import { EB_Garamond, Geist, Geist_Mono, Roboto } from 'next/font/google'
 import { preload } from 'react-dom'
 import QueryProvider from '~/components/query_provider'
 import { ThemeProvider } from '~/components/theme-provider'
+import { Toaster } from '~/components/ui/sonner'
 import { TooltipProvider } from '~/components/ui/tooltip'
 import { cn } from '~/lib/utils'
 
@@ -61,6 +62,7 @@ export default function RootLayout({
         <ThemeProvider>
           <TooltipProvider>
             <QueryProvider>{children}</QueryProvider>
+            <Toaster />
           </TooltipProvider>
         </ThemeProvider>
       </body>

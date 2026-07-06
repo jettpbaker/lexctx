@@ -87,7 +87,9 @@
   --secondary-foreground: oklch(0.861 0.0014 286.37);
   --muted: oklch(0.2768 0 0);
   --muted-foreground: oklch(0.6 0 0);
-  --accent: oklch(0.9189 0 0);
+  /* Dark surface so the standard `bg-accent text-accent-foreground` pair reads
+     as light-on-dark. Matches --sidebar-accent. */
+  --accent: oklch(0.235 0 0);
   --accent-foreground: oklch(0.861 0.0014 286.37);
   --destructive: oklch(0.6409 0.155 12.04);
   --destructive-foreground: oklch(0.6409 0.155 12.04);

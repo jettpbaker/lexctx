@@ -42,6 +42,7 @@ type ChatComposerProps = {
   modelId: ChatModelId
   onModelChange: (modelId: ChatModelId) => void
   placeholder?: string
+  prefill?: { text: string; token: number }
   onSubmit: (modelText: string) => void
   onStop?: () => void
 }
@@ -54,6 +55,7 @@ export function ChatComposer({
   displayUsage = true,
   modelId,
   onModelChange,
+  prefill,
   onSubmit,
   onStop,
 }: ChatComposerProps) {
@@ -231,6 +233,24 @@ export function ChatComposer({
     setMentionContext(null)
     editorRef.current?.replaceChildren()
   }, [canSubmit, modelText, onSubmit])
+
+  const appliedPrefillToken = useRef(0)
+  useEffect(() => {
+    if (!prefill || prefill.token === 0) return
+    if (prefill.token === appliedPrefillToken.current) return
+    appliedPrefillToken.current = prefill.token
+
+    const { text } = prefill
+    mirrorInputRef.current = false
+    setParts([{ type: 'text', content: text, start: 0, end: text.length }])
+    setCursor(text.length)
+    setMentionContext(null)
+
+    const editor = editorRef.current
+    if (editor) {
+      requestAnimationFrame(() => editor.focus())
+    }
+  }, [prefill])
 
   const maxContextTokens = getChatModelConfig(modelId).maxContextTokens
 

@@ -8,6 +8,7 @@ import { Cancel01Icon, Search01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import { CollectionGroup } from '~/components/sources/collection_group'
 import { Separator } from '~/components/ui/separator'
@@ -195,6 +196,12 @@ export default function CollectionsSidebarClient({
         queryKey: [COLLECTIONS_WITH_SOURCES_KEY],
       })
     },
+    onError: (error, { collection }) => {
+      console.error(`Error adding sources to collection: ${collection.id}`, error)
+      toast.error("Couldn't add sources", {
+        description: 'Something went wrong starting the upload. Please try again.',
+      })
+    },
     onSettled: () => {
       setAddingSourcesCollectionId(null)
     },
@@ -223,8 +230,10 @@ export default function CollectionsSidebarClient({
       return { previousCollections, previousLocalSource }
     },
     onError: (error, source, context) => {
-      // TODO: Toast
       console.error(`Error deleting source: ${source.id}`, error)
+      toast.error("Couldn't delete source", {
+        description: `“${source.name}” was restored. Please try again.`,
+      })
 
       const queryKey = [COLLECTIONS_WITH_SOURCES_KEY]
 
@@ -271,8 +280,10 @@ export default function CollectionsSidebarClient({
       return { previousCollections, previousLocalSources }
     },
     onError: (error, collection, context) => {
-      // TODO: Toast
       console.error(`Error deleting collection: ${collection.id}`, error)
+      toast.error("Couldn't delete collection", {
+        description: `“${collection.name}” was restored. Please try again.`,
+      })
 
       const queryKey = [COLLECTIONS_WITH_SOURCES_KEY]
 
@@ -311,8 +322,10 @@ export default function CollectionsSidebarClient({
       return { previousCollections, previousLocalSource }
     },
     onError: (error, variables, context) => {
-      // TODO: Toast
       console.error(`Error renaming source: ${variables.source.id}`, error)
+      toast.error("Couldn't rename source", {
+        description: 'The previous name was restored. Please try again.',
+      })
 
       const queryKey = [COLLECTIONS_WITH_SOURCES_KEY]
 
@@ -345,8 +358,10 @@ export default function CollectionsSidebarClient({
       return { previousCollections }
     },
     onError: (error, variables, context) => {
-      // TODO: Toast
       console.error(`Error renaming collection: ${variables.collection.id}`, error)
+      toast.error("Couldn't rename collection", {
+        description: 'The previous name was restored. Please try again.',
+      })
 
       const queryKey = [COLLECTIONS_WITH_SOURCES_KEY]
 

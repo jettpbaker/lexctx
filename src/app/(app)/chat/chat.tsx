@@ -5,6 +5,8 @@ import type { HydratedCitation, HydratedSourceLink } from '~/lib/types/citations
 import type { ComponentProps } from 'react'
 
 import { useChat } from '@ai-sdk/react'
+import { Alert02Icon, ArrowReloadHorizontalIcon, Cancel01Icon } from '@hugeicons/core-free-icons'
+import { HugeiconsIcon } from '@hugeicons/react'
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { DefaultChatTransport, getToolName, isToolUIPart, UIMessage } from 'ai'
 import dynamic from 'next/dynamic'
@@ -18,6 +20,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { toast } from 'sonner'
 import { Conversation, ConversationContent } from '~/components/ai-elements/conversation'
 import { Message, MessageContent, MessageResponse } from '~/components/ai-elements/message'
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '~/components/ai-elements/reasoning'
@@ -30,7 +33,8 @@ import {
 } from '~/components/chat/citation_chip'
 import { SourceLinkChip } from '~/components/chat/source_link_chip'
 import { ToolStatusRow } from '~/components/chat/tool_status_row'
-import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
+import { Button } from '~/components/ui/button'
+import { Dialog, DialogClose, DialogContent, DialogTitle } from '~/components/ui/dialog'
 import { getChatUsageById, updateChatModelId } from '~/server/actions/chats'
 import { useChatGenerationStore } from '~/hooks/useChatGenerationStore'
 import {
@@ -201,7 +205,7 @@ export default function Chat({
 
   const registerGeneration = useChatGenerationStore((state) => state.register)
 
-  const { sendMessage, messages, status, stop } = useChat<LexMessage>({
+  const { sendMessage, messages, status, stop, error, regenerate } = useChat<LexMessage>({
     id,
     messages: initialMessages,
     transport: new DefaultChatTransport({
@@ -232,6 +236,13 @@ export default function Chat({
       await queryClient.refetchQueries({ queryKey: [CHAT_USAGE_KEY, id] })
       setStreamingTurnUsage(null)
       router.refresh()
+    },
+    onError: (error) => {
+      console.error('Chat stream error', error)
+      setStreamingTurnUsage(null)
+      toast.error('The response stopped unexpectedly', {
+        description: 'Retry to pick up where it left off.',
+      })
     },
   })
 
@@ -321,7 +332,7 @@ export default function Chat({
             messages.map((message, index) => {
               const isLastMessage = index === messages.length - 1
               const isEmptyLatestAssistantMessage =
-                isWaitingForVisibleAssistantOutput &&
+                (isWaitingForVisibleAssistantOutput || status === 'error') &&
                 isLastMessage &&
                 message.role === 'assistant' &&
                 !hasVisibleAssistantParts(message)
@@ -359,6 +370,14 @@ export default function Chat({
               </MessageContent>
             </Message>
           )}
+
+          {status === 'error' && (
+            <Message from='assistant'>
+              <MessageContent>
+                <ChatErrorRow error={error} onRetry={() => regenerate()} />
+              </MessageContent>
+            </Message>
+          )}
         </ConversationContent>
       </Conversation>
 
@@ -371,6 +390,34 @@ export default function Chat({
           modelId={modelId}
           onModelChange={setModelId}
         />
+      </div>
+    </div>
+  )
+}
+
+function ChatErrorRow({ error, onRetry }: { error: Error | undefined; onRetry: () => void }) {
+  const detail = error?.message?.trim()
+
+  return (
+    <div className='flex items-start gap-2.5 rounded-lg border border-destructive/25 bg-gradient-to-r from-warn/10 to-warn/0 px-3 py-2.5'>
+      <HugeiconsIcon
+        icon={Alert02Icon}
+        strokeWidth={2}
+        className='mt-0.5 size-4 shrink-0 text-destructive'
+      />
+      <div className='flex min-w-0 flex-1 flex-col gap-2'>
+        <div className='flex flex-col gap-0.5'>
+          <p className='text-xs font-medium text-destructive'>Something went wrong</p>
+          <p className='text-xs text-muted-foreground'>
+            {detail && detail.length > 0 ? detail : 'The response stopped before it finished.'}
+          </p>
+        </div>
+        <div>
+          <Button variant='outline' size='sm' onClick={onRetry}>
+            <HugeiconsIcon icon={ArrowReloadHorizontalIcon} strokeWidth={2} />
+            Retry
+          </Button>
+        </div>
       </div>
     </div>
   )
@@ -477,6 +524,13 @@ const MessageParts = ({
           <DialogTitle className='sr-only'>
             {selectedCitation?.sourceName ?? 'Lecture video'}
           </DialogTitle>
+
+          <DialogClose
+            aria-label='Close video'
+            className='absolute top-3 right-3 z-10 flex size-8 items-center justify-center rounded-full bg-black/50 text-white/90 backdrop-blur-sm transition-colors hover:bg-black/70 hover:text-white focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none'
+          >
+            <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className='size-4' />
+          </DialogClose>
 
           {selectedPlaybackId && (
             <MuxPlayer
