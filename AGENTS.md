@@ -4,16 +4,16 @@
 
 ### Overview
 
-**lexctx** is an AI-powered lecture/audio content management and chat application built as a single Next.js 16 app (not a monorepo). Users organize audio/video content into Collections, upload sources (transcribed via FAL.ai Wizper), index transcripts into ChromaDB for RAG, and chat with an OpenAI-powered assistant.
+**lexctx** is an AI-powered lecture/audio content management and chat application built as a single Next.js 16 app (not a monorepo). Users organize audio/video content into Collections, upload sources (transcribed via FAL.ai Wizper, video hosted on Mux), index transcripts into ChromaDB for RAG, and chat with a multi-provider assistant (OpenAI/Anthropic/xAI/DeepSeek via the Vercel AI Gateway).
 
 ### Tech Stack
 
 - **Runtime/Package Manager:** Bun 1.3.0 (`bun.lock` is the lockfile)
-- **Framework:** Next.js 16.1.7 (App Router, Turbopack dev)
+- **Framework:** Next.js 16.2.x (App Router, Turbopack dev)
 - **Language:** TypeScript (strict)
 - **ORM:** Drizzle ORM (Neon Postgres)
 - **Vector DB:** ChromaDB Cloud (hybrid dense+sparse search)
-- **AI:** Vercel AI SDK 6.x, OpenAI (gpt-5.4-nano)
+- **AI:** Vercel AI SDK 6.x via AI Gateway (multi-provider chat models; OpenAI for embeddings/titles)
 - **Linting:** oxlint
 - **Formatting:** oxfmt
 
@@ -38,10 +38,14 @@ All commands via `bun run <script>` (see `package.json`):
 All env vars are validated at startup via `@t3-oss/env-nextjs` in `src/env.ts`. The app **will not start** without them. Required:
 
 - `DATABASE_URL` — Neon PostgreSQL connection URL
-- `OPENAI_API_KEY` — OpenAI API key
+- `OPENAI_API_KEY` — OpenAI API key (embeddings, chat titles)
+- `AI_GATEWAY_API_KEY` — Vercel AI Gateway key (chat models)
+- `EXA_API_KEY` — Exa web-search key (chat web tools)
 - `CHROMA_HOST`, `CHROMA_API_KEY`, `CHROMA_TENANT`, `CHROMA_DATABASE` — ChromaDB Cloud credentials
 - `UPLOADTHING_TOKEN` — UploadThing file upload token
 - `FAL_KEY` — FAL.ai transcription key
+- `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET` — Mux video API credentials
+- `BASE_URL` — app origin (used by workflows/webhooks)
 
 These are injected as Cursor Cloud secrets. For local dev, place them in `.env` at the repo root (Next.js auto-loads it).
 
