@@ -62,13 +62,24 @@ function createHybridSchema() {
   return schema
 }
 
-export async function getLectureChunksCollection() {
-  const client = getChromaClient()
+type LectureChunksCollectionPromise = ReturnType<
+  ReturnType<typeof getChromaClient>['getOrCreateCollection']
+>
 
-  return client.getOrCreateCollection({
-    name: LECTURE_CHUNKS_COLLECTION,
-    schema: createHybridSchema(),
-  })
+let lectureChunksCollectionPromise: LectureChunksCollectionPromise | undefined
+
+export async function getLectureChunksCollection() {
+  lectureChunksCollectionPromise ??= getChromaClient()
+    .getOrCreateCollection({
+      name: LECTURE_CHUNKS_COLLECTION,
+      schema: createHybridSchema(),
+    })
+    .catch((error) => {
+      lectureChunksCollectionPromise = undefined
+      throw error
+    })
+
+  return lectureChunksCollectionPromise
 }
 
 type LectureChunkSourceMetadata = {
@@ -108,6 +119,15 @@ export async function deleteLectureChunks(sourceId: string) {
   await collection.delete({
     where: {
       sourceId,
+    },
+  })
+}
+
+export async function deleteLectureChunksForCollection(collectionId: string) {
+  const collection = await getLectureChunksCollection()
+  await collection.delete({
+    where: {
+      collectionId,
     },
   })
 }

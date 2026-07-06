@@ -6,9 +6,6 @@ import { Idea01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useControllableState } from '@radix-ui/react-use-controllable-state'
 import { cjk } from '@streamdown/cjk'
-import { code } from '@streamdown/code'
-import { math } from '@streamdown/math'
-import { mermaid } from '@streamdown/mermaid'
 import { ChevronRightIcon } from 'lucide-react'
 import {
   createContext,
@@ -206,7 +203,7 @@ export type ReasoningContentProps = ComponentProps<typeof CollapsibleContent> & 
   children: string
 }
 
-const streamdownPlugins = { cjk, code, math, mermaid }
+const streamdownPlugins = { cjk }
 
 export const ReasoningContent = memo(({ className, children, ...props }: ReasoningContentProps) => {
   const { setHasReasoningContent } = useReasoning()

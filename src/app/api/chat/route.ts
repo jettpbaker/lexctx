@@ -261,7 +261,11 @@ export async function POST(req: Request) {
     messages,
   })
 
-  await withDbRetry(() => persistChat(id, validatedMessages, modelId))
+  const checkpointPersistPromise = withDbRetry(() =>
+    persistChat(id, validatedMessages, modelId)
+  ).catch((error) => {
+    console.error('Error persisting chat checkpoint: ', error)
+  })
 
   const modelMessages = await convertToModelMessages(validatedMessages)
 
@@ -304,6 +308,8 @@ export async function POST(req: Request) {
       )
     },
     onFinish: async ({ messages, isAborted }) => {
+      await checkpointPersistPromise
+
       if (!streamResult) {
         return
       }

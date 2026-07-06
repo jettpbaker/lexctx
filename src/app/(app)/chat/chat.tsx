@@ -3,19 +3,32 @@
 import type { LexMessage } from '~/app/api/chat/route'
 import type { ChatUsage } from '~/lib/types/chat'
 import type { HydratedCitation, HydratedSourceLink } from '~/lib/types/citations'
+import type { ComponentProps } from 'react'
 
 import { useChat } from '@ai-sdk/react'
-import MuxPlayer from '@mux/mux-player-react'
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { DefaultChatTransport, getToolName, isToolUIPart, UIMessage } from 'ai'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { Conversation, ConversationContent } from '~/components/ai-elements/conversation'
 import { Message, MessageContent, MessageResponse } from '~/components/ai-elements/message'
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '~/components/ai-elements/reasoning'
 import { Shimmer } from '~/components/ai-elements/shimmer'
 import { ChatComposer } from '~/components/chat/chat_composer'
-import { CitationChip, CitationChipPending, citationNotReadyTooltip } from '~/components/chat/citation_chip'
+import {
+  CitationChip,
+  CitationChipPending,
+  citationNotReadyTooltip,
+} from '~/components/chat/citation_chip'
 import { SourceLinkChip } from '~/components/chat/source_link_chip'
 import { ToolStatusRow } from '~/components/chat/tool_status_row'
 import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
@@ -34,6 +47,113 @@ import { CHAT_USAGE_KEY, CITATIONS_KEY, SOURCE_LINKS_KEY } from '~/lib/query_key
 import { getCitationHydrationByIds } from '~/server/actions/getCitationHydrationByIds'
 import { getSourceLinkHydrationByIds } from '~/server/actions/getSourceLinkHydrationByIds'
 import type { ChatModelId } from '~/server/ai/modelMapping'
+
+const MuxPlayer = dynamic(() => import('@mux/mux-player-react'), { ssr: false })
+
+const citationHrefRegex = /\]\(#citation-([^)]+)\)/g
+
+function parseCitationIdsFromMessages(messages: UIMessage[]) {
+  const ids: string[] = []
+
+  messages.forEach((message) => {
+    message.parts.forEach((part) => {
+      if (part.type !== 'text') return
+
+      for (const match of part.text.matchAll(citationHrefRegex)) {
+        ids.push(match[1])
+      }
+    })
+  })
+
+  return ids
+}
+
+function parseSourceLinkIdsFromMessages(messages: UIMessage[]) {
+  const ids: string[] = []
+
+  messages.forEach((message) => {
+    message.parts.forEach((part) => {
+      if (part.type !== 'text') return
+      ids.push(...parseSourceIdsFromMarkdown(part.text))
+    })
+  })
+
+  return ids
+}
+
+type MessageLinkContextValue = {
+  citationsById: Map<string, HydratedCitation>
+  sourceLinksById: Map<string, HydratedSourceLink>
+  setSelectedCitation: (citation: HydratedCitation) => void
+}
+
+const MessageLinkContext = createContext<MessageLinkContextValue | null>(null)
+
+function MessageResponseLink({ href, children }: ComponentProps<'a'>) {
+  const context = useContext(MessageLinkContext)
+
+  if (href?.startsWith('#citation-')) {
+    const citationId = href.replace('#citation-', '')
+    const citation = context?.citationsById.get(citationId)
+
+    if (!context || !citation) {
+      return (
+        <>
+          {' '}
+          <CitationChipPending />
+        </>
+      )
+    }
+
+    return (
+      <>
+        {' '}
+        <CitationChip citation={citation} onOpen={context.setSelectedCitation} />
+      </>
+    )
+  }
+
+  if (isCollectionLinkHref(href)) {
+    return (
+      <>
+        {' '}
+        <SourceLinkChip>{children}</SourceLinkChip>
+      </>
+    )
+  }
+
+  if (isSourceLinkHref(href)) {
+    const sourceId = sourceIdFromHref(href)
+    const source = context?.sourceLinksById.get(sourceId)
+    const hasPlayableVideo = source?.videoStatus === 'ready' && Boolean(source.muxPlaybackId)
+
+    return (
+      <>
+        {' '}
+        <SourceLinkChip
+          title={
+            hasPlayableVideo
+              ? `Open ${source.sourceName}`
+              : source
+                ? citationNotReadyTooltip(source.videoStatus)
+                : undefined
+          }
+          onClick={
+            hasPlayableVideo && context
+              ? () => context.setSelectedCitation(hydratedSourceLinkToCitation(source))
+              : undefined
+          }
+        >
+          {children}
+        </SourceLinkChip>
+      </>
+    )
+  }
+
+  return <a href={href}>{children}</a>
+}
+
+const messageResponseComponents = { a: MessageResponseLink }
 
 export default function Chat({
   id,
@@ -145,8 +265,14 @@ export default function Chat({
     (latestMessage?.role === 'user' ||
       (latestMessage?.role === 'assistant' && !latestAssistantHasVisibleParts))
 
-  const citationIds = [...new Set(parseCitationIdsFromMessages(messages))].sort()
-  const sourceLinkIds = [...new Set(parseSourceLinkIdsFromMessages(messages))].sort()
+  const citationIds = useMemo(
+    () => [...new Set(parseCitationIdsFromMessages(messages))].sort(),
+    [messages]
+  )
+  const sourceLinkIds = useMemo(
+    () => [...new Set(parseSourceLinkIdsFromMessages(messages))].sort(),
+    [messages]
+  )
 
   const hydratedCitationsQuery = useQuery({
     queryKey: [CITATIONS_KEY, citationIds],
@@ -192,36 +318,6 @@ export default function Chat({
     )
   }, [hydratedSourceLinksQuery.data])
 
-  function parseCitationIdsFromMessages(messages: UIMessage[]) {
-    const ids: string[] = []
-    const citationHrefRegex = /\]\(#citation-([^)]+)\)/g
-
-    messages.forEach((message) => {
-      message.parts.forEach((part) => {
-        if (part.type !== 'text') return
-
-        for (const match of part.text.matchAll(citationHrefRegex)) {
-          ids.push(match[1])
-        }
-      })
-    })
-
-    return ids
-  }
-
-  function parseSourceLinkIdsFromMessages(messages: UIMessage[]) {
-    const ids: string[] = []
-
-    messages.forEach((message) => {
-      message.parts.forEach((part) => {
-        if (part.type !== 'text') return
-        ids.push(...parseSourceIdsFromMarkdown(part.text))
-      })
-    })
-
-    return ids
-  }
-
   return (
     <div className='relative flex h-dvh min-h-0 w-full flex-1 flex-col overflow-hidden pt-[36px]'>
       <Conversation>
@@ -246,8 +342,6 @@ export default function Chat({
                       message={message}
                       citationsById={citationsById}
                       sourceLinksById={sourceLinksById}
-                      citationHydrationUpdatedAt={hydratedCitationsQuery.dataUpdatedAt}
-                      sourceLinkHydrationUpdatedAt={hydratedSourceLinksQuery.dataUpdatedAt}
                       isLastMessage={isLastMessage}
                       isStreaming={status === 'streaming'}
                     />
@@ -300,16 +394,12 @@ const MessageParts = ({
   message,
   citationsById,
   sourceLinksById,
-  citationHydrationUpdatedAt,
-  sourceLinkHydrationUpdatedAt,
   isLastMessage,
   isStreaming,
 }: {
   message: UIMessage
   citationsById: Map<string, HydratedCitation>
   sourceLinksById: Map<string, HydratedSourceLink>
-  citationHydrationUpdatedAt: number
-  sourceLinkHydrationUpdatedAt: number
   isLastMessage: boolean
   isStreaming: boolean
 }) => {
@@ -317,6 +407,14 @@ const MessageParts = ({
   const selectedPlaybackId = selectedCitation?.muxPlaybackId
   const selectedBlurDataUrl = selectedCitation?.muxBlurDataUrl
   const selectedBlurAspectRatio = selectedCitation?.muxBlurAspectRatio
+  const linkContextValue = useMemo(
+    () => ({
+      citationsById,
+      sourceLinksById,
+      setSelectedCitation,
+    }),
+    [citationsById, sourceLinksById]
+  )
 
   return (
     <>
@@ -360,75 +458,9 @@ const MessageParts = ({
 
         if (part.type === 'text') {
           return (
-            <MessageResponse
-              key={`${message.id}-${i}-${citationHydrationUpdatedAt}-${sourceLinkHydrationUpdatedAt}`}
-              components={{
-                a: ({ href, children }) => {
-                  if (href?.startsWith('#citation-')) {
-                    const citationId = href.replace('#citation-', '')
-                    const citation = citationsById.get(citationId)
-
-                    if (!citation) {
-                      return (
-                        <>
-                          {' '}
-                          <CitationChipPending />
-                        </>
-                      )
-                    }
-
-                    return (
-                      <>
-                        {' '}
-                        <CitationChip citation={citation} onOpen={setSelectedCitation} />
-                      </>
-                    )
-                  }
-
-                  if (isCollectionLinkHref(href)) {
-                    return (
-                      <>
-                        {' '}
-                        <SourceLinkChip>{children}</SourceLinkChip>
-                      </>
-                    )
-                  }
-
-                  if (isSourceLinkHref(href)) {
-                    const sourceId = sourceIdFromHref(href)
-                    const source = sourceLinksById.get(sourceId)
-                    const hasPlayableVideo =
-                      source?.videoStatus === 'ready' && Boolean(source.muxPlaybackId)
-
-                    return (
-                      <>
-                        {' '}
-                        <SourceLinkChip
-                          title={
-                            hasPlayableVideo
-                              ? `Open ${source.sourceName}`
-                              : source
-                                ? citationNotReadyTooltip(source.videoStatus)
-                                : undefined
-                          }
-                          onClick={
-                            hasPlayableVideo
-                              ? () => setSelectedCitation(hydratedSourceLinkToCitation(source))
-                              : undefined
-                          }
-                        >
-                          {children}
-                        </SourceLinkChip>
-                      </>
-                    )
-                  }
-
-                  return <a href={href}>{children}</a>
-                },
-              }}
-            >
-              {part.text}
-            </MessageResponse>
+            <MessageLinkContext.Provider value={linkContextValue} key={`${message.id}-${i}`}>
+              <MessageResponse components={messageResponseComponents}>{part.text}</MessageResponse>
+            </MessageLinkContext.Provider>
           )
         }
 

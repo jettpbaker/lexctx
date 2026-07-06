@@ -4,9 +4,6 @@ import type { UIMessage } from 'ai'
 import type { ComponentProps, HTMLAttributes, ReactElement } from 'react'
 
 import { cjk } from '@streamdown/cjk'
-import { code } from '@streamdown/code'
-import { math } from '@streamdown/math'
-import { mermaid } from '@streamdown/mermaid'
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
 import {
   createContext,
@@ -297,7 +294,7 @@ export const MessageBranchPage = ({ className, ...props }: MessageBranchPageProp
 
 export type MessageResponseProps = ComponentProps<typeof Streamdown>
 
-const streamdownPlugins = { cjk, code, math, mermaid }
+const streamdownPlugins = { cjk }
 
 export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (
@@ -308,7 +305,9 @@ export const MessageResponse = memo(
     />
   ),
   (prevProps, nextProps) =>
-    prevProps.children === nextProps.children && nextProps.isAnimating === prevProps.isAnimating
+    prevProps.children === nextProps.children &&
+    nextProps.isAnimating === prevProps.isAnimating &&
+    nextProps.components === prevProps.components
 )
 
 MessageResponse.displayName = 'MessageResponse'

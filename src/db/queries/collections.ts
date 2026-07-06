@@ -2,6 +2,7 @@ import { asc, desc, eq } from 'drizzle-orm'
 import { unstable_noStore as noStore } from 'next/cache'
 import db from '~/db'
 import { collections, sources } from '~/db/schema'
+import type { CollectionSourceRow, CollectionsWithSources } from '~/lib/types/collections'
 
 export async function deleteCollectionById(id: string) {
   await db.delete(collections).where(eq(collections.id, id))
@@ -14,27 +15,44 @@ export async function listAllCollections() {
 export async function listCollectionsWithSources() {
   noStore()
 
-  // TODO: Do this with a join for 1 query
-  const [allCollections, allSources] = await Promise.all([
-    db.select().from(collections).orderBy(desc(collections.createdAt), asc(collections.id)),
-    db.select().from(sources).orderBy(desc(sources.createdAt), asc(sources.id)),
-  ])
+  const rows = await db
+    .select({
+      collection: collections,
+      source: {
+        id: sources.id,
+        collectionId: sources.collectionId,
+        name: sources.name,
+        fileSize: sources.fileSize,
+        status: sources.status,
+        videoStatus: sources.videoStatus,
+        error: sources.error,
+        createdAt: sources.createdAt,
+      },
+    })
+    .from(collections)
+    .leftJoin(sources, eq(sources.collectionId, collections.id))
+    .orderBy(
+      desc(collections.createdAt),
+      asc(collections.id),
+      desc(sources.createdAt),
+      asc(sources.id)
+    )
 
-  const sourcesByCollection = new Map<string, typeof allSources>()
+  const collectionsById = new Map<string, CollectionsWithSources[number]>()
 
-  for (const source of allSources) {
-    const collectionSources = sourcesByCollection.get(source.collectionId)
-    if (collectionSources) {
-      collectionSources.push(source)
-    } else {
-      sourcesByCollection.set(source.collectionId, [source])
+  for (const row of rows) {
+    let collection = collectionsById.get(row.collection.id)
+    if (!collection) {
+      collection = { ...row.collection, sources: [] }
+      collectionsById.set(row.collection.id, collection)
+    }
+
+    if (row.source) {
+      collection.sources.push(row.source as CollectionSourceRow)
     }
   }
 
-  return allCollections.map((collection) => ({
-    ...collection,
-    sources: sourcesByCollection.get(collection.id) ?? [],
-  }))
+  return Array.from(collectionsById.values())
 }
 
 export async function createCollection(name: string) {

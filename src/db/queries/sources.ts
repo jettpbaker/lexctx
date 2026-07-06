@@ -31,6 +31,21 @@ export async function deleteSourceById(id: string) {
   await db.delete(sources).where(eq(sources.id, id))
 }
 
+const sourceCleanupSelect = {
+  id: sources.id,
+  audioKey: sources.audioKey,
+  muxAssetId: sources.muxAssetId,
+  muxUploadId: sources.muxUploadId,
+}
+
+export async function listSourceCleanupRowsForCollection(collectionId: string) {
+  return db
+    .select(sourceCleanupSelect)
+    .from(sources)
+    .where(eq(sources.collectionId, collectionId))
+    .orderBy(desc(sources.createdAt), asc(sources.id))
+}
+
 export async function listSourcesForCollection(collectionId: string) {
   return db
     .select(sourceListSelect)

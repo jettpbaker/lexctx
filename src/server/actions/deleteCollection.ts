@@ -1,14 +1,23 @@
 'use server'
 
+import { deleteLectureChunksForCollection } from '~/db/chroma'
 import { deleteCollectionById } from '~/db/queries/collections'
-import { listSourcesForCollection } from '~/db/queries/sources'
+import { listSourceCleanupRowsForCollection } from '~/db/queries/sources'
 
-import { deleteSource } from './deleteSource'
+import { cleanupSourceFilesAndVideo } from './deleteSource'
 
 export async function deleteCollection(collectionId: string) {
-  const sources = await listSourcesForCollection(collectionId)
+  const sources = await listSourceCleanupRowsForCollection(collectionId)
 
-  await Promise.all(sources.map((source) => deleteSource(source.id)))
+  const deleteChunksPromise = deleteLectureChunksForCollection(collectionId).catch((error) => {
+    console.error('Non-blocking collection cleanup failed: ', {
+      collectionId,
+      reason: error,
+    })
+  })
+
+  await Promise.all(sources.map((source) => cleanupSourceFilesAndVideo(source)))
+  await deleteChunksPromise
 
   await deleteCollectionById(collectionId)
 }
