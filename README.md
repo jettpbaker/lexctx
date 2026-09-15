@@ -14,7 +14,7 @@ Chat with your lectures. Upload recordings, organize them into collections, and 
 | --- | --- |
 | Framework | Next.js 16 (App Router, Turbopack), React 19 |
 | Runtime / PM | Bun |
-| Database | Neon Postgres via Drizzle ORM |
+| Database | PlanetScale Postgres via Drizzle ORM |
 | Vector search | ChromaDB Cloud (hybrid dense + sparse) |
 | AI | Vercel AI SDK 6 via AI Gateway (OpenAI / Anthropic / xAI / DeepSeek) |
 | Media | Mux (video), FAL.ai Wizper (transcription), UploadThing (audio), mediabunny (client-side extraction) |
